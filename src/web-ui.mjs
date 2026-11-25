@@ -47,9 +47,13 @@ tr:last-child td{border-bottom:none}
 .actions{display:flex;gap:4px;flex-wrap:wrap}
 .actions button{padding:4px 8px;font-size:12px}
 code{display:block;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:12px;word-break:break-all;font-size:13px;color:var(--text)}
-dialog{border:1px solid var(--line);border-radius:12px;padding:22px;max-width:560px;width:calc(100% - 40px);box-shadow:0 20px 60px rgba(0,0,0,.18);background:var(--card);color:var(--text)}
+dialog{border:1px solid var(--line);border-radius:12px;padding:22px;max-width:700px;width:calc(100% - 40px);box-shadow:0 20px 60px rgba(0,0,0,.18);background:var(--card);color:var(--text)}
 dialog::backdrop{background:var(--backdrop)}
 .field{margin:10px 0}
+.event-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px;margin-top:12px}
+.event-grid .field{margin:0;min-width:0}
+.event-grid .field.wide{grid-column:1 / -1}
+.event-grid code{white-space:pre-wrap;word-break:break-word}
 .field label{display:block;color:var(--muted);margin-bottom:4px}
 .field input{width:100%}
 .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
@@ -158,7 +162,7 @@ dialog::backdrop{background:var(--backdrop)}
 <dialog id="eventDialog">
 <h2>记录详情</h2>
 <p class="muted" id="eventIdLine"></p>
-<div id="eventFields"></div>
+<div class="event-grid" id="eventFields"></div>
 <div class="dialog-actions"><button id="copyEventBtn">复制详情</button><button class="primary" id="closeEventBtn">关闭</button></div>
 </dialog>
 
@@ -383,6 +387,8 @@ var EVENT_LABELS = {
 function prettyArgs(text){
   try { return JSON.stringify(JSON.parse(text), null, 2); } catch (error) { return text; }
 }
+// 编号、时间、客户端信息与调用参数通常较长，单独占一行；其余字段两栏显示。
+var WIDE_EVENT_KEYS = { id: true, ts: true, ua: true, mcpArgs: true };
 function showEventDetail(entry){
   currentEvent = publicEvent(entry);
   entry = currentEvent;
@@ -393,19 +399,22 @@ function showEventDetail(entry){
     if (key === "raw") return;
     var value = entry[key];
     if (value === undefined || value === null || value === "") return;
-    var row = el("div", "field");
-    row.appendChild(el("label", "", EVENT_LABELS[key] || key));
+    var display;
     if (key === "ts") {
-      row.appendChild(el("code", "", fmt(value) + " (" + value + ")"));
+      display = fmt(value) + " (" + value + ")";
     } else if (key === "durationMs") {
-      row.appendChild(el("code", "", fmtDuration(value)));
+      display = fmtDuration(value);
     } else if (key === "mcpArgs") {
-      row.appendChild(el("code", "", prettyArgs(value)));
+      display = prettyArgs(value);
     } else if (key === "reason") {
-      row.appendChild(el("code", "", resultLabel(value)));
+      display = resultLabel(value);
     } else {
-      row.appendChild(el("code", "", typeof value === "object" ? JSON.stringify(value) : String(value)));
+      display = typeof value === "object" ? JSON.stringify(value) : String(value);
     }
+    var row = el("div", "field");
+    if (WIDE_EVENT_KEYS[key] || String(display).length > 48) row.classList.add("wide");
+    row.appendChild(el("label", "", EVENT_LABELS[key] || key));
+    row.appendChild(el("code", "", display));
     box.appendChild(row);
   });
   byId("eventDialog").showModal();
