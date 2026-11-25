@@ -361,8 +361,19 @@ function operationLabel(entry){
   return entry.method || "-";
 }
 
+// 内部标识仅用于区分用户，不向界面展示。
+var INTERNAL_EVENT_KEYS = { tokenId: true, raw: true };
+function publicEvent(entry){
+  if (!entry) return entry;
+  var result = {};
+  Object.keys(entry).forEach(function(key){
+    if (!INTERNAL_EVENT_KEYS[key]) result[key] = entry[key];
+  });
+  return result;
+}
+
 var EVENT_LABELS = {
-  id: "记录编号", ts: "时间", event: "记录类型", tokenId: "密钥编号", user: "用户",
+  id: "记录编号", ts: "时间", event: "记录类型", user: "用户",
   method: "请求方式", path: "访问路径", status: "响应状态", reason: "结果",
   mcpMethod: "操作类型", mcpTool: "操作名称", mcpArgs: "操作参数",
   bytesIn: "接收数据量", bytesOut: "发送数据量",
@@ -373,7 +384,8 @@ function prettyArgs(text){
   try { return JSON.stringify(JSON.parse(text), null, 2); } catch (error) { return text; }
 }
 function showEventDetail(entry){
-  currentEvent = entry;
+  currentEvent = publicEvent(entry);
+  entry = currentEvent;
   byId("eventIdLine").textContent = "记录编号：" + (entry.id || "-");
   var box = byId("eventFields");
   box.textContent = "";
@@ -409,8 +421,7 @@ function openDetail(item){
   var statusText = item.status;
   if (item.expiresAt && Date.parse(item.expiresAt) <= Date.now()) statusText = "expired";
   byId("detailMeta").textContent =
-    "密钥编号：" + item.id +
-    " ｜ 状态：" + statusLabel(statusText) +
+    "状态：" + statusLabel(statusText) +
     " ｜ 累计使用：" + (item.useCount || 0) + " 次" +
     " ｜ 最近使用：" + fmt(item.lastUsedAt) +
     " ｜ 备注：" + (item.note || "-");
