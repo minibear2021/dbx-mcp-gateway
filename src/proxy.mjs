@@ -1,5 +1,6 @@
 import http from 'node:http';
 import https from 'node:https';
+import { randomUUID } from 'node:crypto';
 import { isPublicMcpPath } from './config.mjs';
 import { parseBearer } from './crypto-util.mjs';
 
@@ -16,6 +17,9 @@ const HOP_BY_HOP = new Set([
   'origin',
   'authorization',
 ]);
+
+// 只采样请求体开头少量字节用于识别 JSON-RPC 方法名，不记录请求正文。
+const MAX_BODY_SAMPLE = 4096;
 
 function filterRequestHeaders(headers) {
   const result = {};
@@ -42,6 +46,26 @@ function sendJson(res, status, payload, extraHeaders = {}) {
   res.end(`${JSON.stringify(payload)}\n`);
 }
 
+/** 从请求体采样中只提取 JSON-RPC 的方法名与工具名，失败时返回空对象。 */
+function extractRpcInfo(chunks) {
+  if (chunks.length === 0) return {};
+  const text = Buffer.concat(chunks).toString('utf8');
+  let method;
+  try {
+    const payload = JSON.parse(text);
+    const first = Array.isArray(payload) ? payload[0] : payload;
+    if (first && typeof first.method === 'string') method = first.method;
+    if (method === 'tools/call' && first.params && typeof first.params.name === 'string') {
+      return { mcpMethod: method.slice(0, 100), mcpTool: first.params.name.slice(0, 200) };
+    }
+  } catch {
+    // 请求体可能被采样上限截断，退回用正则取方法名。
+    const match = text.match(/"method"\s*:\s*"([^"]+)"/);
+    if (match) method = match[1];
+  }
+  return method ? { mcpMethod: method.slice(0, 100) } : {};
+}
+
 export function createProxyHandler(config, store, audit) {
   const upstream = new URL(config.upstreamUrl);
   const agent = upstream.protocol === 'https:'
@@ -50,11 +74,28 @@ export function createProxyHandler(config, store, audit) {
 
   return function proxyHandler(req, res) {
     const startedAt = Date.now();
+    const requestId = `req_${randomUUID()}`;
     const requestUrl = new URL(req.url || '/', 'http://gateway.local');
     const pathname = requestUrl.pathname;
     const remoteIp = req.socket.remoteAddress ?? '-';
     const originHeader = req.headers.origin;
     const origin = Array.isArray(originHeader) ? originHeader[0] : originHeader;
+    const ua = typeof req.headers['user-agent'] === 'string'
+      ? req.headers['user-agent'].slice(0, 200)
+      : undefined;
+
+    let bytesIn = 0;
+    let bytesOut = 0;
+    const bodySample = [];
+    let sampledBytes = 0;
+    req.on('data', (chunk) => {
+      bytesIn += chunk.length;
+      if (sampledBytes < MAX_BODY_SAMPLE) {
+        const take = Math.min(chunk.length, MAX_BODY_SAMPLE - sampledBytes);
+        bodySample.push(chunk.subarray(0, take));
+        sampledBytes += take;
+      }
+    });
 
     // 每个 MCP 请求只写一条审计；成功调用在响应结束时落盘。
     let recorded = false;
@@ -63,6 +104,7 @@ export function createProxyHandler(config, store, audit) {
       recorded = true;
       audit.append({
         event: 'mcp',
+        id: requestId,
         tokenId: tokenRecord?.id ?? '-',
         user: tokenRecord?.label ?? '-',
         method: req.method,
@@ -71,6 +113,10 @@ export function createProxyHandler(config, store, audit) {
         reason,
         durationMs: Date.now() - startedAt,
         ip: remoteIp,
+        bytesIn,
+        bytesOut,
+        ...(ua ? { ua } : {}),
+        ...extractRpcInfo(bodySample),
       });
     };
 
@@ -142,6 +188,7 @@ export function createProxyHandler(config, store, audit) {
       (upstreamRes) => {
         const status = upstreamRes.statusCode ?? 502;
         res.writeHead(status, filterResponseHeaders(upstreamRes.headers));
+        upstreamRes.on('data', (chunk) => { bytesOut += chunk.length; });
         upstreamRes.pipe(res);
         upstreamRes.on('error', () => {
           recordAudit(502, 'upstream-stream-error', record);

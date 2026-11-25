@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 
 const MAX_LINES = 5000;
 
@@ -11,7 +12,11 @@ export class AuditLog {
 
   append(entry) {
     if (!this.enabled) return;
-    const line = `${JSON.stringify({ ts: new Date().toISOString(), ...entry })}\n`;
+    const line = `${JSON.stringify({
+      id: `evt_${randomUUID()}`,
+      ts: new Date().toISOString(),
+      ...entry,
+    })}\n`;
     fs.mkdirSync(path.dirname(this.filePath), { recursive: true, mode: 0o700 });
     fs.appendFileSync(this.filePath, line, { mode: 0o600 });
     this.trim();

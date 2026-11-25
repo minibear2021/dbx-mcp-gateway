@@ -96,7 +96,7 @@ dialog::backdrop{background:rgba(15,23,42,.35)}
 </div>
 <p class="muted" id="detailMeta" style="margin:12px 0"></p>
 <table>
-<thead><tr><th>时间</th><th>方法</th><th>路径</th><th>状态</th><th>结果</th><th>耗时</th><th>来源 IP</th><th>事件</th></tr></thead>
+<thead><tr><th>时间</th><th>MCP 方法</th><th>状态</th><th>结果</th><th>耗时</th><th>来源 IP</th><th>详情</th></tr></thead>
 <tbody id="detailRows"></tbody>
 </table>
 <p class="muted" id="detailEmpty" hidden>该用户暂无 MCP 调用记录。</p>
@@ -105,7 +105,7 @@ dialog::backdrop{background:rgba(15,23,42,.35)}
 <section class="card" id="auditCard" hidden>
 <h2>最近请求</h2>
 <table>
-<thead><tr><th>时间</th><th>事件</th><th>用户</th><th>Token ID</th><th>方法</th><th>路径</th><th>状态</th><th>原因</th></tr></thead>
+<thead><tr><th>时间</th><th>事件</th><th>用户</th><th>Token ID</th><th>方法</th><th>路径</th><th>状态</th><th>原因</th><th>详情</th></tr></thead>
 <tbody id="auditRows"></tbody>
 </table>
 </section>
@@ -130,6 +130,13 @@ dialog::backdrop{background:rgba(15,23,42,.35)}
 <div class="dialog-actions"><button id="copyBtn">复制</button><button class="primary" id="closeTokenBtn">完成</button></div>
 </dialog>
 
+<dialog id="eventDialog">
+<h2>事件详情</h2>
+<p class="muted" id="eventIdLine"></p>
+<div id="eventFields"></div>
+<div class="dialog-actions"><button id="copyEventBtn">复制 JSON</button><button class="primary" id="closeEventBtn">关闭</button></div>
+</dialog>
+
 <div id="toast"></div>
 
 <script>
@@ -137,6 +144,7 @@ dialog::backdrop{background:rgba(15,23,42,.35)}
 "use strict";
 var editingId = null;
 var currentDetail = null;
+var currentEvent = null;
 var apiBase = "";
 var dbxWebUrl = "";
 
@@ -260,6 +268,40 @@ function fmtDuration(value){
   return value + " ms";
 }
 
+var EVENT_LABELS = {
+  id: "事件 ID", ts: "时间", event: "事件类型", tokenId: "Token ID", user: "用户备注",
+  method: "HTTP 方法", path: "路径", status: "状态码", reason: "结果",
+  mcpMethod: "MCP 方法", mcpTool: "MCP 工具", bytesIn: "接收字节", bytesOut: "发送字节",
+  durationMs: "耗时", ip: "来源 IP", ua: "User-Agent", action: "操作",
+};
+function rpcLabel(entry){
+  var method = entry.mcpMethod;
+  if (!method) return entry.method || "-";
+  return entry.mcpTool ? method + " · " + entry.mcpTool : method;
+}
+function showEventDetail(entry){
+  currentEvent = entry;
+  byId("eventIdLine").textContent = "事件 ID: " + (entry.id || "-");
+  var box = byId("eventFields");
+  box.textContent = "";
+  Object.keys(entry).forEach(function(key){
+    if (key === "raw") return;
+    var value = entry[key];
+    if (value === undefined || value === null || value === "") return;
+    var row = el("div", "field");
+    row.appendChild(el("label", "", EVENT_LABELS[key] || key));
+    if (key === "ts") {
+      row.appendChild(el("code", "", fmt(value) + " (" + value + ")"));
+    } else if (key === "durationMs") {
+      row.appendChild(el("code", "", fmtDuration(value)));
+    } else {
+      row.appendChild(el("code", "", typeof value === "object" ? JSON.stringify(value) : String(value)));
+    }
+    box.appendChild(row);
+  });
+  byId("eventDialog").showModal();
+}
+
 function openDetail(item){
   currentDetail = item;
   byId("tokenCard").hidden = true;
@@ -296,15 +338,16 @@ async function loadDetail(){
       var row = el("tr");
       var values = [
         fmt(entry.ts),
-        entry.method,
-        entry.path,
+        rpcLabel(entry),
         entry.status,
         entry.reason,
         fmtDuration(entry.durationMs),
-        entry.ip,
-        entry.event
+        entry.ip
       ];
       values.forEach(function(value){ row.appendChild(el("td", "", value === undefined ? "-" : value)); });
+      var detailCell = el("td");
+      detailCell.appendChild(actionButton("详情", "", function(){ showEventDetail(entry); }));
+      row.appendChild(detailCell);
       body.appendChild(row);
     });
     byId("detailEmpty").hidden = entries.length > 0;
@@ -388,6 +431,9 @@ async function loadAudit(){
       [entry.ts, entry.event, entry.user, entry.tokenId, entry.method, entry.path, entry.status, entry.reason].forEach(function(value){
         row.appendChild(el("td", "", value === undefined ? "-" : value));
       });
+      var detailCell = el("td");
+      detailCell.appendChild(actionButton("详情", "", function(){ showEventDetail(entry); }));
+      row.appendChild(detailCell);
       body.appendChild(row);
     });
     byId("auditCard").hidden = false;
@@ -426,6 +472,16 @@ byId("copyBtn").addEventListener("click", async function(){
   }
 });
 byId("closeTokenBtn").addEventListener("click", function(){ byId("tokenDialog").close(); });
+byId("closeEventBtn").addEventListener("click", function(){ byId("eventDialog").close(); });
+byId("copyEventBtn").addEventListener("click", async function(){
+  var text = currentEvent ? JSON.stringify(currentEvent, null, 2) : "";
+  try {
+    await navigator.clipboard.writeText(text);
+    toast("已复制事件 JSON");
+  } catch (error) {
+    toast("复制失败，请手动选择文本");
+  }
+});
 
 async function init(){
   try {

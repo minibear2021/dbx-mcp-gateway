@@ -152,6 +152,9 @@ test('每次 MCP 调用都写入审计，且可按 tokenId / event 过滤出单�
   assert.ok(aEntries.every((entry) => entry.user === '张三' && entry.tokenId === a.id));
   assert.ok(aEntries.every((entry) => typeof entry.durationMs === 'number'));
   assert.ok(aEntries.every((entry) => typeof entry.ts === 'string' && entry.path === '/mcp'));
+  assert.ok(aEntries.every((entry) => typeof entry.id === 'string' && entry.id.startsWith('req_')));
+  assert.ok(aEntries.every((entry) => entry.mcpMethod === 'initialize'));
+  assert.ok(aEntries.every((entry) => typeof entry.bytesIn === 'number' && typeof entry.bytesOut === 'number'));
 
   const bEntries = (await admin('GET', `/audit?event=mcp&tokenId=${b.id}&limit=50`)).body.entries;
   assert.equal(bEntries.length, 1);
@@ -161,6 +164,33 @@ test('每次 MCP 调用都写入审计，且可按 tokenId / event 过滤出单�
   assert.equal(allMcp.length, 4);
   const adminEvents = (await admin('GET', '/audit?event=admin&limit=50')).body.entries;
   assert.equal(adminEvents.length, 2);
+  assert.ok(adminEvents.every((entry) => typeof entry.id === 'string' && entry.id.startsWith('evt_')));
+});
+
+test('MCP 调用记录提取 tools/call 的工具名，且绝不记录 token 或 Cookie', async (t) => {
+  const { admin, mcp } = await setup(t);
+  const created = (await admin('POST', '/tokens', { body: { label: '工具调用者' } })).body;
+
+  const response = await mcp(created.token, {
+    headers: { cookie: 'dbx_session=valid-session', 'user-agent': 'WorkBuddy/1.0' },
+    body: JSON.stringify({
+      jsonrpc: '2.0', id: 2, method: 'tools/call',
+      params: { name: 'dbx_execute_query', arguments: { sql: 'SELECT 1' } },
+    }),
+  });
+  assert.equal(response.status, 200);
+
+  const entry = (await admin('GET', `/audit?event=mcp&tokenId=${created.id}&limit=5`)).body.entries[0];
+  assert.equal(entry.mcpMethod, 'tools/call');
+  assert.equal(entry.mcpTool, 'dbx_execute_query');
+  assert.equal(entry.ua, 'WorkBuddy/1.0');
+  assert.equal(entry.bytesIn > 0, true);
+  assert.equal(entry.bytesOut > 0, true);
+
+  const serialized = JSON.stringify(entry);
+  assert.equal(serialized.includes(created.token), false);
+  assert.equal(serialized.includes('dbx_session'), false);
+  assert.equal(serialized.includes('SELECT 1'), false);
 });
 
 test('管理 API：仅 dbx 会话可用；列表脱敏、禁用/启用、轮换', async (t) => {
@@ -208,6 +238,9 @@ test('Web UI 与 MCP 共用同一个 4225 端口；页面不再包含管理口�
     assert.match(html, /\/audit\?limit=50/);
     assert.match(html, /id="detailCard"/);
     assert.match(html, /event=mcp&tokenId=/);
+    assert.match(html, /id="eventDialog"/);
+    assert.match(html, /MCP 方法/);
+    assert.match(html, /showEventDetail/);
   }
 
   const config = await fetch(`${baseUrl}/ui/config`).then((response) => response.json());
