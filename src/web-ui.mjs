@@ -6,7 +6,7 @@ export const WEB_UI_HTML = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<title>DBX MCP Token 管理</title>
+<title>DBX MCP Gateway</title>
 <style>
 :root{color-scheme:light;--bg:#f6f7f9;--card:#fff;--line:#e3e6eb;--text:#1f2430;--muted:#6b7280;--brand:#2563eb;--brand-strong:#1d4ed8;--brand-soft-bg:#e8eefc;--danger:#dc2626;--danger-soft-bg:#fee2e2;--ok:#059669;--ok-soft-bg:#d1fae5;--warn:#b45309;--warn-soft-bg:#fef3c7;--hover:#f3f4f6;--focus:#bfdbfe;--code-bg:#f3f4f6;--backdrop:rgba(15,23,42,.35);--toast-bg:#111827;--toast-text:#fff;--on-brand:#fff;--shadow:0 1px 2px rgba(16,24,40,.04)}
 html.dark{color-scheme:dark;--bg:#0f172a;--card:#151e2e;--line:#2b3648;--text:#e5e7eb;--muted:#9ca3af;--brand:#60a5fa;--brand-strong:#93c5fd;--brand-soft-bg:#1e3a5f;--danger:#f87171;--danger-soft-bg:#4a1d1d;--ok:#34d399;--ok-soft-bg:#123a2e;--warn:#fbbf24;--warn-soft-bg:#463410;--hover:#1e293b;--focus:#334155;--code-bg:#0b1220;--backdrop:rgba(0,0,0,.55);--toast-bg:#f3f4f6;--toast-text:#111827;--on-brand:#0b1220;--shadow:none}
@@ -19,7 +19,6 @@ h1{font-size:22px;margin:0 0 4px}
 h2{font-size:16px;margin:0 0 10px}
 .sub{margin:0;color:var(--muted)}
 .header-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.badge{background:var(--brand-soft-bg);color:var(--brand-strong);border-radius:999px;padding:6px 12px;font-size:12px;white-space:nowrap}
 .theme-btn{display:inline-flex;align-items:center;gap:6px}
 .theme-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
@@ -71,9 +70,8 @@ dialog::backdrop{background:var(--backdrop)}
 <body>
 <div class="wrap">
 <header>
-<div><h1>DBX MCP Token 管理</h1><p class="sub">多 Token · 用户备注 · 轮换 / 禁用 · 审计</p></div>
+<div><h1>DBX MCP Gateway</h1><p class="sub">集中管理成员访问凭证，随时查看使用情况</p></div>
 <div class="header-tools">
-<div class="badge">单端口 4225 · MCP + 管理 UI</div>
 <button id="themeBtn" class="theme-btn" type="button" title="切换深浅色主题" aria-label="切换深浅色主题">
 <svg id="themeMoon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
 <svg id="themeSun" viewBox="0 0 24 24" aria-hidden="true" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
@@ -83,11 +81,11 @@ dialog::backdrop{background:var(--backdrop)}
 </header>
 
 <section class="card" id="loginCard">
-<h2>dbx Web 登录态</h2>
-<p class="muted">本页只复用你在 dbx Web 的登录会话，不需要额外凭据。请先在 dbx Web 登录，再点击下方按钮。</p>
+<h2>欢迎使用 DBX MCP Gateway</h2>
+<p class="muted">使用你已有的 dbx 账号即可进入，无需另行注册或输入密码。若尚未登录，请先登录 dbx，再点击下方按钮。</p>
 <div class="row" style="margin-top:14px">
-<button id="dbxContinueBtn" class="primary">使用 dbx 登录态继续</button>
-<a id="dbxLoginLink" href="#" target="_blank" rel="noopener" hidden>打开 dbx Web 登录页</a>
+<button id="dbxContinueBtn" class="primary">使用 dbx 账号继续</button>
+<a id="dbxLoginLink" href="#" target="_blank" rel="noopener" hidden>前往 dbx 登录</a>
 </div>
 <p class="error" id="loginError"></p>
 </section>
@@ -95,9 +93,9 @@ dialog::backdrop{background:var(--backdrop)}
 <main id="app" hidden>
 <section class="card">
 <div class="row">
-<button id="newBtn" class="primary">+ 新建 Token</button>
+<button id="newBtn" class="primary">+ 新建访问密钥</button>
 <button id="refreshBtn">刷新</button>
-<button id="auditBtn">审计日志</button>
+<button id="auditBtn">访问记录</button>
 <span class="spacer"></span>
 <span class="muted" id="summary"></span>
 </div>
@@ -105,7 +103,7 @@ dialog::backdrop{background:var(--backdrop)}
 
 <section class="card" id="tokenCard">
 <table>
-<thead><tr><th>用户备注</th><th>说明</th><th>状态</th><th>创建</th><th>轮换</th><th>最近使用</th><th>过期</th><th>次数</th><th>操作</th></tr></thead>
+<thead><tr><th>用户</th><th>备注</th><th>状态</th><th>创建时间</th><th>更新时间</th><th>最近使用</th><th>到期时间</th><th>使用次数</th><th>操作</th></tr></thead>
 <tbody id="tokenRows"></tbody>
 </table>
 </section>
@@ -113,22 +111,22 @@ dialog::backdrop{background:var(--backdrop)}
 <section class="card" id="detailCard" hidden>
 <div class="row">
 <button id="detailBackBtn">← 返回列表</button>
-<h2 id="detailTitle" style="margin:0">用户调用详情</h2>
+<h2 id="detailTitle" style="margin:0">成员使用详情</h2>
 <span class="spacer"></span>
 <button id="detailRefreshBtn">刷新记录</button>
 </div>
 <p class="muted" id="detailMeta" style="margin:12px 0"></p>
 <table>
-<thead><tr><th>时间</th><th>MCP 方法</th><th>状态</th><th>结果</th><th>耗时</th><th>客户端 IP</th><th>详情</th></tr></thead>
+<thead><tr><th>时间</th><th>操作</th><th>状态</th><th>结果</th><th>耗时</th><th>访问来源</th><th>详情</th></tr></thead>
 <tbody id="detailRows"></tbody>
 </table>
-<p class="muted" id="detailEmpty" hidden>该用户暂无 MCP 调用记录。</p>
+<p class="muted" id="detailEmpty" hidden>该成员暂无使用记录。</p>
 </section>
 
 <section class="card" id="auditCard" hidden>
-<h2>最近请求</h2>
+<h2>最近访问</h2>
 <table>
-<thead><tr><th>时间</th><th>用户</th><th>Token ID</th><th>状态</th><th>结果</th><th>耗时</th><th>详情</th></tr></thead>
+<thead><tr><th>时间</th><th>用户</th><th>密钥编号</th><th>状态</th><th>结果</th><th>耗时</th><th>详情</th></tr></thead>
 <tbody id="auditRows"></tbody>
 </table>
 </section>
@@ -137,27 +135,27 @@ dialog::backdrop{background:var(--backdrop)}
 
 <dialog id="editDialog">
 <form method="dialog" id="editForm">
-<h2 id="editTitle">新建 Token</h2>
-<div class="field"><label>用户备注（必填）</label><input type="text" id="fieldLabel" required></div>
-<div class="field"><label>说明</label><input type="text" id="fieldNote"></div>
-<div class="field"><label>过期时间（可留空；YAML/ISO 日期均可）</label><input type="text" id="fieldExpiry" placeholder="2027-01-01T00:00:00Z"></div>
+<h2 id="editTitle">新建访问密钥</h2>
+<div class="field"><label>用户名称（必填）</label><input type="text" id="fieldLabel" required></div>
+<div class="field"><label>备注</label><input type="text" id="fieldNote"></div>
+<div class="field"><label>到期时间（选填）</label><input type="text" id="fieldExpiry" placeholder="2027-01-01T00:00:00Z"></div>
 <p class="error" id="editError"></p>
 <div class="dialog-actions"><button type="button" id="editCancelBtn">取消</button><button type="submit" class="primary" id="editSubmit">保存</button></div>
 </form>
 </dialog>
 
 <dialog id="tokenDialog">
-<h2>请保存 Token 明文</h2>
-<p class="muted">它只会显示这一次。关闭后无法再次查看，遗失请轮换。</p>
+<h2>请保存访问密钥</h2>
+<p class="muted">密钥仅显示一次，关闭后无法再次查看。遗失请重新生成。</p>
 <code id="newTokenValue"></code>
 <div class="dialog-actions"><button id="copyBtn">复制</button><button class="primary" id="closeTokenBtn">完成</button></div>
 </dialog>
 
 <dialog id="eventDialog">
-<h2>事件详情</h2>
+<h2>记录详情</h2>
 <p class="muted" id="eventIdLine"></p>
 <div id="eventFields"></div>
-<div class="dialog-actions"><button id="copyEventBtn">复制 JSON</button><button class="primary" id="closeEventBtn">关闭</button></div>
+<div class="dialog-actions"><button id="copyEventBtn">复制详情</button><button class="primary" id="closeEventBtn">关闭</button></div>
 </dialog>
 
 <div id="toast"></div>
@@ -261,11 +259,11 @@ async function api(method, path, body){
   });
   if (response.status === 401) {
     showLogin();
-    throw new Error("dbx 登录态无效或已过期，请先在 dbx Web 登录后重试");
+    throw new Error("登录已失效，请重新登录 dbx 后重试");
   }
   var text = await response.text();
   var data = text ? JSON.parse(text) : {};
-  if (!response.ok) throw new Error(data.error || ("HTTP " + response.status));
+  if (!response.ok) throw new Error(resultLabel(data.error) || ("服务暂时不可用（" + response.status + "）"));
   return data;
 }
 
@@ -276,7 +274,7 @@ async function tryDbxSession(){
     loadTokens();
     return true;
   } catch (error) {
-    byId("loginError").textContent = "尚未登录 dbx Web 或会话已失效，请先在 dbx Web 登录后重试。";
+    byId("loginError").textContent = "登录已失效或尚未登录，请先在 dbx 完成登录。";
     return false;
   }
 }
@@ -291,20 +289,20 @@ function actionButton(label, cls, onClick){
 function renderTokens(tokens){
   var body = byId("tokenRows");
   body.textContent = "";
-  byId("summary").textContent = "共 " + tokens.length + " 个 token";
+  byId("summary").textContent = "共 " + tokens.length + " 个访问密钥";
   tokens.forEach(function(item){
     var row = el("tr");
     var userCell = el("td");
     var userLink = el("button", "link", item.label);
     userLink.type = "button";
-    userLink.title = "查看该用户的 MCP 调用记录";
+    userLink.title = "查看该成员的使用记录";
     userLink.addEventListener("click", function(){ openDetail(item); });
     userCell.appendChild(userLink);
     row.appendChild(userCell);
     row.appendChild(el("td", "muted", item.note || "-"));
     var statusText = item.status;
     if (item.expiresAt && Date.parse(item.expiresAt) <= Date.now()) statusText = "expired";
-    row.appendChild(el("td")).appendChild(el("span", "pill " + statusText, statusText));
+    row.appendChild(el("td")).appendChild(el("span", "pill " + statusText, statusLabel(statusText)));
     row.appendChild(el("td", "", fmt(item.createdAt)));
     row.appendChild(el("td", "", fmt(item.rotatedAt)));
     row.appendChild(el("td", "", fmt(item.lastUsedAt)));
@@ -315,8 +313,8 @@ function renderTokens(tokens){
     var box = el("div", "actions");
     var id = item.id;
     box.appendChild(actionButton("编辑", "", function(){ openEdit(item); }));
-    box.appendChild(actionButton("轮换", "", function(){ rotate(id); }));
-    box.appendChild(actionButton(item.status === "active" ? "禁用" : "启用", "", function(){ setStatus(id, item.status === "active" ? "disable" : "enable"); }));
+    box.appendChild(actionButton("重新生成", "", function(){ rotate(id); }));
+    box.appendChild(actionButton(item.status === "active" ? "暂停" : "启用", "", function(){ setStatus(id, item.status === "active" ? "disable" : "enable"); }));
     box.appendChild(actionButton("删除", "danger", function(){ remove(id, item.label); }));
     actions.appendChild(box);
     row.appendChild(actions);
@@ -333,28 +331,47 @@ async function loadTokens(){
 
 function fmtDuration(value){
   if (typeof value !== "number" || !isFinite(value)) return "-";
-  return value + " ms";
+  return value + " 毫秒";
+}
+function statusLabel(value){
+  var labels = { active: "正常", disabled: "已暂停", expired: "已过期" };
+  return labels[value] || value || "-";
+}
+function resultLabel(value){
+  var labels = {
+    ok: "成功", invalid_token: "密钥无效", token_disabled: "密钥已暂停", token_expired: "密钥已过期",
+    unauthorized: "未授权", admin_unauthorized: "尚未登录", not_found: "未找到", method_not_allowed: "操作不允许",
+    bad_request: "请求有误", upstream_error: "服务异常"
+  };
+  return labels[value] || value || "-";
+}
+var TOOL_LABELS = {
+  dbx_execute_query: "执行查询", dbx_list_connections: "查看数据源", dbx_describe_table: "查看表结构",
+  dbx_list_tables: "查看数据表", dbx_list_databases: "查看数据库", dbx_open_session: "建立会话",
+  dbx_execute_batch: "批量执行", dbx_close_session: "关闭会话"
+};
+function operationLabel(entry){
+  if (!entry) return "-";
+  if (entry.mcpTool && TOOL_LABELS[entry.mcpTool]) return TOOL_LABELS[entry.mcpTool];
+  if (entry.mcpTool) return entry.mcpTool;
+  if (entry.mcpMethod) return entry.mcpMethod;
+  return entry.method || "-";
 }
 
 var EVENT_LABELS = {
-  id: "事件 ID", ts: "时间", event: "事件类型", tokenId: "Token ID", user: "用户备注",
-  method: "HTTP 方法", path: "路径", status: "状态码", reason: "结果",
-  mcpMethod: "MCP 方法", mcpTool: "MCP 工具", mcpArgs: "调用参数（脱敏）",
-  bytesIn: "接收字节", bytesOut: "发送字节",
-  durationMs: "耗时", ip: "客户端 IP", remoteIp: "直连地址（Docker 网关）",
-  ua: "User-Agent", action: "操作",
+  id: "记录编号", ts: "时间", event: "记录类型", tokenId: "密钥编号", user: "用户",
+  method: "请求方式", path: "访问路径", status: "响应状态", reason: "结果",
+  mcpMethod: "操作类型", mcpTool: "操作名称", mcpArgs: "操作参数",
+  bytesIn: "接收数据量", bytesOut: "发送数据量",
+  durationMs: "耗时", ip: "访问来源", remoteIp: "直连地址",
+  ua: "客户端信息", action: "操作",
 };
 function prettyArgs(text){
   try { return JSON.stringify(JSON.parse(text), null, 2); } catch (error) { return text; }
 }
-function rpcLabel(entry){
-  var method = entry.mcpMethod;
-  if (!method) return entry.method || "-";
-  return entry.mcpTool ? method + " · " + entry.mcpTool : method;
-}
 function showEventDetail(entry){
   currentEvent = entry;
-  byId("eventIdLine").textContent = "事件 ID: " + (entry.id || "-");
+  byId("eventIdLine").textContent = "记录编号：" + (entry.id || "-");
   var box = byId("eventFields");
   box.textContent = "";
   Object.keys(entry).forEach(function(key){
@@ -369,6 +386,8 @@ function showEventDetail(entry){
       row.appendChild(el("code", "", fmtDuration(value)));
     } else if (key === "mcpArgs") {
       row.appendChild(el("code", "", prettyArgs(value)));
+    } else if (key === "reason") {
+      row.appendChild(el("code", "", resultLabel(value)));
     } else {
       row.appendChild(el("code", "", typeof value === "object" ? JSON.stringify(value) : String(value)));
     }
@@ -382,15 +401,15 @@ function openDetail(item){
   byId("tokenCard").hidden = true;
   byId("auditCard").hidden = true;
   byId("detailCard").hidden = false;
-  byId("detailTitle").textContent = "用户调用详情 · " + item.label;
+  byId("detailTitle").textContent = "成员使用详情 · " + item.label;
   var statusText = item.status;
   if (item.expiresAt && Date.parse(item.expiresAt) <= Date.now()) statusText = "expired";
   byId("detailMeta").textContent =
-    "Token ID: " + item.id +
-    " ｜ 状态: " + statusText +
-    " ｜ 调用次数: " + (item.useCount || 0) +
-    " ｜ 最近使用: " + fmt(item.lastUsedAt) +
-    " ｜ 说明: " + (item.note || "-");
+    "密钥编号：" + item.id +
+    " ｜ 状态：" + statusLabel(statusText) +
+    " ｜ 使用次数：" + (item.useCount || 0) +
+    " ｜ 最近使用：" + fmt(item.lastUsedAt) +
+    " ｜ 备注：" + (item.note || "-");
   loadDetail();
 }
 
@@ -413,9 +432,9 @@ async function loadDetail(){
       var row = el("tr");
       var values = [
         fmt(entry.ts),
-        rpcLabel(entry),
+        operationLabel(entry),
         entry.status,
-        entry.reason,
+        resultLabel(entry.reason),
         fmtDuration(entry.durationMs),
         entry.ip
       ];
@@ -431,7 +450,7 @@ async function loadDetail(){
 
 function openEdit(item){
   editingId = item ? item.id : null;
-  byId("editTitle").textContent = item ? "编辑 " + item.label : "新建 Token";
+  byId("editTitle").textContent = item ? "编辑 · " + item.label : "新建访问密钥";
   byId("fieldLabel").value = item ? item.label : "";
   byId("fieldNote").value = item ? (item.note || "") : "";
   byId("fieldExpiry").value = item && item.expiresAt ? item.expiresAt : "";
@@ -446,7 +465,7 @@ async function saveEdit(){
     expiresAt: byId("fieldExpiry").value.trim() || null
   };
   if (!body.label) {
-    byId("editError").textContent = "用户备注不能为空";
+    byId("editError").textContent = "请填写用户名称";
     return;
   }
   try {
@@ -471,7 +490,7 @@ function showNewToken(value){
 }
 
 async function rotate(id){
-  if (!confirm("轮换后旧 token 立即失效，继续？")) return;
+  if (!confirm("重新生成后，旧密钥将立即失效。确定继续吗？")) return;
   try {
     var result = await api("POST", "/tokens/" + encodeURIComponent(id) + "/rotate", {});
     showNewToken(result.token);
@@ -482,13 +501,13 @@ async function rotate(id){
 async function setStatus(id, action){
   try {
     await api("POST", "/tokens/" + encodeURIComponent(id) + "/" + action);
-    toast("已" + (action === "enable" ? "启用" : "禁用"));
+    toast(action === "enable" ? "已恢复访问" : "已暂停访问");
     loadTokens();
   } catch (error) { handleError(error); }
 }
 
 async function remove(id, label){
-  if (!confirm("确认删除 " + label + " 的 token？此操作不可恢复。")) return;
+  if (!confirm("确定删除「" + label + "」的访问密钥吗？此操作不可恢复。")) return;
   try {
     await api("DELETE", "/tokens/" + encodeURIComponent(id));
     toast("已删除");
@@ -503,7 +522,7 @@ async function loadAudit(){
     body.textContent = "";
     data.entries.slice().reverse().forEach(function(entry){
       var row = el("tr");
-      [fmt(entry.ts), entry.user, entry.tokenId, entry.status, entry.reason, fmtDuration(entry.durationMs)].forEach(function(value){
+      [fmt(entry.ts), entry.user, entry.tokenId, entry.status, resultLabel(entry.reason), fmtDuration(entry.durationMs)].forEach(function(value){
         row.appendChild(el("td", "", value === undefined || value === "" ? "-" : value));
       });
       var detailCell = el("td");
@@ -552,7 +571,7 @@ byId("copyEventBtn").addEventListener("click", async function(){
   var text = currentEvent ? JSON.stringify(currentEvent, null, 2) : "";
   try {
     await navigator.clipboard.writeText(text);
-    toast("已复制事件 JSON");
+    toast("已复制记录详情");
   } catch (error) {
     toast("复制失败，请手动选择文本");
   }

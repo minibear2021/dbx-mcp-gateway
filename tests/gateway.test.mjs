@@ -274,25 +274,26 @@ test('Web UI 与 MCP 共用同一个 4225 端口；页面不再包含管理口�
     assert.equal(response.status, 200);
     assert.match(response.headers.get('content-type'), /text\/html/);
     const html = await response.text();
-    assert.match(html, /DBX MCP Token 管理/);
-    assert.match(html, /使用 dbx 登录态继续/);
+    assert.match(html, /DBX MCP Gateway/);
+    assert.match(html, /使用 dbx 账号继续/);
     assert.doesNotMatch(html, /管理口令/);
     assert.doesNotMatch(html, /type="password"/);
+    assert.doesNotMatch(html, /单端口 4225/);
     assert.match(html, /\/audit\?limit=50/);
     assert.match(html, /id="detailCard"/);
     assert.match(html, /event=mcp&tokenId=/);
     assert.match(html, /id="eventDialog"/);
-    assert.match(html, /MCP 方法/);
-    assert.match(html, /调用参数（脱敏）/);
+    assert.match(html, /<th>时间<\/th><th>操作<\/th><th>状态<\/th>/);
+    assert.match(html, /操作参数/);
     assert.match(html, /showEventDetail/);
     assert.match(html, /id="themeBtn"/);
     assert.match(html, /dbx-theme/);
     assert.match(html, /mcp-gateway-theme/);
     assert.match(html, /html\.dark/);
-    // 「最近请求」列表：去掉事件/方法/路径，原因改结果并补上耗时与客户端 IP。
-    assert.match(html, /<th>时间<\/th><th>用户<\/th><th>Token ID<\/th><th>状态<\/th><th>结果<\/th><th>耗时<\/th><th>详情<\/th>/);
-    assert.match(html, /客户端 IP/);
-    assert.match(html, /直连地址（Docker 网关）/);
+    // 「最近访问」列表：使用面向用户的文案，不暴露端口、协议与实现细节。
+    assert.match(html, /<th>时间<\/th><th>用户<\/th><th>密钥编号<\/th><th>状态<\/th><th>结果<\/th><th>耗时<\/th><th>详情<\/th>/);
+    assert.match(html, /访问来源/);
+    assert.match(html, /直连地址/);
   }
 
   const config = await fetch(`${baseUrl}/ui/config`).then((response) => response.json());
@@ -328,7 +329,7 @@ test('DBX_PUBLIC_BASE_PATH：UI、管理 API 与 MCP 在带前缀路径下仍共
 
   const ui = await fetch(`${baseUrl}/dbx/ui`);
   assert.equal(ui.status, 200);
-  assert.match(await ui.text(), /DBX MCP Token 管理/);
+  assert.match(await ui.text(), /DBX MCP Gateway/);
 
   const config = await fetch(`${baseUrl}/ui/config`).then((response) => response.json());
   assert.equal(config.apiBase, '/dbx');
