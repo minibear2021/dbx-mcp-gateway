@@ -279,7 +279,11 @@ test('Web UI 与 MCP 共用同一个 4225 端口；页面不再包含管理口�
     assert.doesNotMatch(html, /管理口令/);
     assert.doesNotMatch(html, /type="password"/);
     assert.doesNotMatch(html, /单端口 4225/);
-    assert.match(html, /\/audit\?limit=50/);
+    assert.doesNotMatch(html, /id="auditBtn"/);
+    assert.doesNotMatch(html, /id="auditCard"/);
+    assert.doesNotMatch(html, /loadAudit/);
+    assert.doesNotMatch(html, /userLink/);
+    assert.match(html, /actionButton\("日志"/);
     assert.match(html, /id="detailCard"/);
     assert.match(html, /event=mcp&tokenId=/);
     assert.match(html, /id="eventDialog"/);
@@ -290,8 +294,7 @@ test('Web UI 与 MCP 共用同一个 4225 端口；页面不再包含管理口�
     assert.match(html, /dbx-theme/);
     assert.match(html, /mcp-gateway-theme/);
     assert.match(html, /html\.dark/);
-    // 「最近访问」列表：使用面向用户的文案，不暴露端口、协议与实现细节。
-    assert.match(html, /<th>时间<\/th><th>用户<\/th><th>密钥编号<\/th><th>状态<\/th><th>结果<\/th><th>耗时<\/th><th>详情<\/th>/);
+    // 详情弹窗字段仍使用面向用户的文案，不暴露端口、协议与实现细节。
     assert.match(html, /访问来源/);
     assert.match(html, /直连地址/);
   }

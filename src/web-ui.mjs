@@ -44,8 +44,6 @@ tr:last-child td{border-bottom:none}
 .pill.expired{background:var(--warn-soft-bg);color:var(--warn)}
 .actions{display:flex;gap:4px;flex-wrap:wrap}
 .actions button{padding:4px 8px;font-size:12px}
-.link{border:0;background:transparent;color:var(--brand);padding:0;font:inherit;cursor:pointer;text-decoration:underline}
-.link:hover{background:transparent;color:var(--brand-strong)}
 code{display:block;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:12px;word-break:break-all;font-size:13px;color:var(--text)}
 dialog{border:1px solid var(--line);border-radius:12px;padding:22px;max-width:560px;width:calc(100% - 40px);box-shadow:0 20px 60px rgba(0,0,0,.18);background:var(--card);color:var(--text)}
 dialog::backdrop{background:var(--backdrop)}
@@ -95,7 +93,6 @@ dialog::backdrop{background:var(--backdrop)}
 <div class="row">
 <button id="newBtn" class="primary">+ 新建访问密钥</button>
 <button id="refreshBtn">刷新</button>
-<button id="auditBtn">访问记录</button>
 <span class="spacer"></span>
 <span class="muted" id="summary"></span>
 </div>
@@ -121,14 +118,6 @@ dialog::backdrop{background:var(--backdrop)}
 <tbody id="detailRows"></tbody>
 </table>
 <p class="muted" id="detailEmpty" hidden>该成员暂无使用记录。</p>
-</section>
-
-<section class="card" id="auditCard" hidden>
-<h2>最近访问</h2>
-<table>
-<thead><tr><th>时间</th><th>用户</th><th>密钥编号</th><th>状态</th><th>结果</th><th>耗时</th><th>详情</th></tr></thead>
-<tbody id="auditRows"></tbody>
-</table>
 </section>
 </main>
 </div>
@@ -292,13 +281,7 @@ function renderTokens(tokens){
   byId("summary").textContent = "共 " + tokens.length + " 个访问密钥";
   tokens.forEach(function(item){
     var row = el("tr");
-    var userCell = el("td");
-    var userLink = el("button", "link", item.label);
-    userLink.type = "button";
-    userLink.title = "查看该成员的使用记录";
-    userLink.addEventListener("click", function(){ openDetail(item); });
-    userCell.appendChild(userLink);
-    row.appendChild(userCell);
+    row.appendChild(el("td", "", item.label));
     row.appendChild(el("td", "muted", item.note || "-"));
     var statusText = item.status;
     if (item.expiresAt && Date.parse(item.expiresAt) <= Date.now()) statusText = "expired";
@@ -312,6 +295,7 @@ function renderTokens(tokens){
     var actions = el("td");
     var box = el("div", "actions");
     var id = item.id;
+    box.appendChild(actionButton("日志", "", function(){ openDetail(item); }));
     box.appendChild(actionButton("编辑", "", function(){ openEdit(item); }));
     box.appendChild(actionButton("重新生成", "", function(){ rotate(id); }));
     box.appendChild(actionButton(item.status === "active" ? "暂停" : "启用", "", function(){ setStatus(id, item.status === "active" ? "disable" : "enable"); }));
@@ -399,7 +383,6 @@ function showEventDetail(entry){
 function openDetail(item){
   currentDetail = item;
   byId("tokenCard").hidden = true;
-  byId("auditCard").hidden = true;
   byId("detailCard").hidden = false;
   byId("detailTitle").textContent = "成员使用详情 · " + item.label;
   var statusText = item.status;
@@ -515,35 +498,12 @@ async function remove(id, label){
   } catch (error) { handleError(error); }
 }
 
-async function loadAudit(){
-  try {
-    var data = await api("GET", "/audit?limit=50");
-    var body = byId("auditRows");
-    body.textContent = "";
-    data.entries.slice().reverse().forEach(function(entry){
-      var row = el("tr");
-      [fmt(entry.ts), entry.user, entry.tokenId, entry.status, resultLabel(entry.reason), fmtDuration(entry.durationMs)].forEach(function(value){
-        row.appendChild(el("td", "", value === undefined || value === "" ? "-" : value));
-      });
-      var detailCell = el("td");
-      detailCell.appendChild(actionButton("详情", "", function(){ showEventDetail(entry); }));
-      row.appendChild(detailCell);
-      body.appendChild(row);
-    });
-    byId("auditCard").hidden = false;
-  } catch (error) { handleError(error); }
-}
-
 byId("dbxContinueBtn").addEventListener("click", async function(){
   byId("loginError").textContent = "";
   await tryDbxSession();
 });
 byId("newBtn").addEventListener("click", function(){ openEdit(null); });
 byId("refreshBtn").addEventListener("click", loadTokens);
-byId("auditBtn").addEventListener("click", function(){
-  if (currentDetail) closeDetail();
-  loadAudit();
-});
 byId("detailBackBtn").addEventListener("click", closeDetail);
 byId("detailRefreshBtn").addEventListener("click", loadDetail);
 byId("editForm").addEventListener("submit", function(event){
