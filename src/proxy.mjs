@@ -1,0 +1,157 @@
+import http from 'node:http';
+import https from 'node:https';
+import { isPublicMcpPath } from './config.mjs';
+import { parseBearer } from './crypto-util.mjs';
+
+const HOP_BY_HOP = new Set([
+  'connection',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailer',
+  'transfer-encoding',
+  'upgrade',
+  'host',
+  'origin',
+  'authorization',
+]);
+
+function filterRequestHeaders(headers) {
+  const result = {};
+  for (const [name, value] of Object.entries(headers)) {
+    if (value === undefined || HOP_BY_HOP.has(name.toLowerCase())) continue;
+    result[name] = value;
+  }
+  return result;
+}
+
+function filterResponseHeaders(headers) {
+  const result = {};
+  for (const [name, value] of Object.entries(headers)) {
+    if (value === undefined) continue;
+    const lower = name.toLowerCase();
+    if (HOP_BY_HOP.has(lower) || lower === 'content-length') continue;
+    result[name] = value;
+  }
+  return result;
+}
+
+function sendJson(res, status, payload, extraHeaders = {}) {
+  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', ...extraHeaders });
+  res.end(`${JSON.stringify(payload)}\n`);
+}
+
+export function createProxyHandler(config, store, audit) {
+  const upstream = new URL(config.upstreamUrl);
+  const agent = upstream.protocol === 'https:'
+    ? new https.Agent({ keepAlive: true })
+    : new http.Agent({ keepAlive: true, maxSockets: 256 });
+
+  return function proxyHandler(req, res) {
+    const requestUrl = new URL(req.url || '/', 'http://gateway.local');
+    const pathname = requestUrl.pathname;
+    const remoteIp = req.socket.remoteAddress ?? '-';
+    const originHeader = req.headers.origin;
+    const origin = Array.isArray(originHeader) ? originHeader[0] : originHeader;
+
+    const recordAudit = (status, reason, tokenRecord = null) => {
+      audit.append({
+        event: 'mcp',
+        tokenId: tokenRecord?.id ?? '-',
+        user: tokenRecord?.label ?? '-',
+        method: req.method,
+        path: pathname,
+        status,
+        reason,
+        ip: remoteIp,
+      });
+    };
+
+    const applyCors = () => {
+      if (!origin) return;
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+      res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, Mcp-Session-Id, Last-Event-ID');
+      res.setHeader('Access-Control-Max-Age', '600');
+    };
+
+    if (config.allowedOrigins.size > 0 && origin && !config.allowedOrigins.has(origin)) {
+      sendJson(res, 403, { error: 'origin_not_allowed' });
+      recordAudit(403, 'origin-not-allowed');
+      return;
+    }
+    applyCors();
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    // 通常由 server.mjs 先分流；这里保留一道防线，避免误转发管理请求。
+    if (!isPublicMcpPath(pathname, config)) {
+      sendJson(res, 404, { error: 'not_found' });
+      recordAudit(404, 'path-not-found');
+      return;
+    }
+
+    const token = parseBearer(req.headers.authorization);
+    if (!token) {
+      sendJson(res, 401, { error: 'missing_or_invalid_bearer_token' }, { 'www-authenticate': 'Bearer' });
+      recordAudit(401, 'missing-or-invalid-bearer-token');
+      return;
+    }
+
+    const { record, reason } = store.verify(token);
+    if (!record) {
+      sendJson(res, 401, { error: 'token_rejected', reason }, { 'www-authenticate': 'Bearer' });
+      recordAudit(401, reason);
+      return;
+    }
+
+    const headers = filterRequestHeaders(req.headers);
+    headers.authorization = `Bearer ${config.upstreamToken}`;
+    headers.host = upstream.host;
+    const forwardedFor = [remoteIp, req.headers['x-forwarded-for']].filter(Boolean).join(', ');
+    headers['x-forwarded-for'] = forwardedFor;
+    // 单端口下浏览器也会把 dbx_session 发到 /mcp；它与 MCP 鉴权无关，不透传给上游。
+    delete headers.origin;
+    delete headers.cookie;
+
+    const target = new URL(config.upstreamUrl);
+    target.pathname = config.upstreamMcpPath;
+    target.search = requestUrl.search;
+
+    const upstreamReq = (upstream.protocol === 'https:' ? https : http).request(
+      target,
+      { method: req.method, headers, agent },
+      (upstreamRes) => {
+        const status = upstreamRes.statusCode ?? 502;
+        res.writeHead(status, filterResponseHeaders(upstreamRes.headers));
+        upstreamRes.pipe(res);
+        upstreamRes.on('error', () => {
+          recordAudit(status, 'upstream-stream-error', record);
+          if (!res.writableEnded) res.destroy();
+        });
+      },
+    );
+
+    upstreamReq.on('error', () => {
+      if (!res.headersSent) {
+        sendJson(res, 502, { error: 'upstream_unavailable' });
+      } else if (!res.writableEnded) {
+        res.destroy();
+      }
+      recordAudit(res.statusCode || 502, 'upstream-error', record);
+    });
+
+    req.on('aborted', () => upstreamReq.destroy());
+    res.on('close', () => {
+      if (!res.writableEnded) upstreamReq.destroy();
+    });
+
+    req.pipe(upstreamReq);
+  };
+}

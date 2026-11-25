@@ -1,0 +1,64 @@
+# 群晖 / 通用 Docker Compose 方案：用 node:22-alpine 直接挂载源码启动网关。
+#
+# 使用方式：
+#   1) 把本插件目录放到 /volume1/docker/dbx/plugins/mcp-token-gateway/
+#      即该目录下应有：src/ bin/ package.json Dockerfile README.md 等。
+#   2) 把 gateway.env.example 复制为 /volume1/docker/dbx/gateway.env，
+#      填入随机 token（DBX_WEB_MCP_TOKEN 与 MCP_GATEWAY_UPSTREAM_TOKEN 必须同值）。
+#   3) 把本文件复制为 /volume1/docker/dbx/compose.yaml 后在 Container Manager 启动。
+#      不需要 .env，也不需要 --env-file。
+#
+# 注意：
+#   - dbx 的 8082 仍保留用于 Web UI；如不需要 Web UI 可删掉该端口映射，
+#     避免客户端绕过网关直接访问 4224。
+#   - 浏览器访问 dbx Web 与网关 UI 请用同一个主机名（都用 NAS 的 IP 或都用同一个域名）。
+
+services:
+  dbx:
+    image: docker.cnb.cool/dbxio.com/dbx:latest
+    pull_policy: always
+    ports:
+      - "4224:4224"
+    volumes:
+      - /volume1/docker/dbx/data:/app/data
+    env_file:
+      - ./gateway.env
+    environment:
+      # 网关注入的 Host 是 dbx:4224，必须加入 dbx 白名单。
+      DBX_WEB_MCP_ALLOWED_HOSTS: dbx:4224
+      # 若 dbx 配了 base path，这里与 MCP_GATEWAY_UPSTREAM_MCP_PATH 同步修改。
+      # DBX_PUBLIC_BASE_PATH: /
+    restart: unless-stopped
+
+  mcp-gateway:
+    image: node:22-alpine
+    pull_policy: missing
+    working_dir: /app
+    command: ["node", "src/server.mjs"]
+    depends_on:
+      - dbx
+    ports:
+      - "4225:4225"
+    volumes:
+      # 源码目录只读挂载；目录里必须有 src/ 和 bin/。
+      - /volume1/docker/dbx/plugins/mcp-token-gateway:/app:ro
+      # token 库与审计日志需要可写。
+      - /volume1/docker/dbx/data/mcp-gateway:/data
+    env_file:
+      - ./gateway.env
+    environment:
+      MCP_GATEWAY_UPSTREAM_URL: http://dbx:4224
+      MCP_GATEWAY_UPSTREAM_MCP_PATH: /mcp
+      MCP_GATEWAY_DATA_DIR: /data
+      MCP_GATEWAY_LISTEN_HOST: 0.0.0.0
+      MCP_GATEWAY_LISTEN_PORT: "4225"
+      MCP_GATEWAY_PUBLIC_MCP_PATH: /mcp
+      # 使用 dbx 默认 base path 时留空；若 dbx 用 /dbx，这里设为 /dbx 且上行设为 /dbx/mcp。
+      MCP_GATEWAY_DBX_BASE_PATH: ""
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4225/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    restart: unless-stopped

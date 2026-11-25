@@ -1,0 +1,28 @@
+# 运行时密钥（绝不入库）
+.env
+.env.*
+!.env.example
+!.env.synology.example
+gateway.env
+*.token
+admin.token
+
+# 运行时数据：token 库与审计日志
+.gateway-data/
+data/
+tokens.json
+audit.jsonl
+
+# 构建产物：用 node dbxp/package.mjs 可重新生成
+dist/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# 编辑器 / 临时文件
+*.tmp
+*.log
+.DS_Store
+Thumbs.db

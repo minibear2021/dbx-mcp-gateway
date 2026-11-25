@@ -1,0 +1,61 @@
+# 群晖 Container Manager 专用：不依赖 .env 插值，使用可见的 gateway.env 注入变量。
+#
+# 部署目录（/volume1/docker/dbx/）应类似：
+#   compose.yaml                        <- 把本文件全文复制过去
+#   gateway.env                         <- 从 gateway.env.example 复制并填写
+#   plugins/mcp-token-gateway/          <- 网关源码（含 src/、bin/、package.json）
+#   data/                               <- dbx 数据目录
+#   data/mcp-gateway/                   <- 网关 token 库与审计日志（自动生成）
+#
+# 关键点：gateway.env 里的两个 TOKEN 必须填同一个随机值。
+# 浏览器访问 dbx Web(8082) 与网关 UI(4225) 要用同一个主机名/IP，否则 Cookie 不会带上。
+
+services:
+  dbx:
+    image: docker.cnb.cool/dbxio.com/dbx:latest
+    pull_policy: always
+    ports:
+      - "8082:4224"
+    volumes:
+      - /volume1/docker/dbx/data:/app/data
+    env_file:
+      - ./gateway.env
+    environment:
+      # 网关注入的 Host 是 dbx:4224，必须加入 dbx 白名单。
+      DBX_WEB_MCP_ALLOWED_HOSTS: dbx:4224
+      # 若 dbx 配了 base path，这里与下方 MCP_GATEWAY_UPSTREAM_MCP_PATH 同步修改。
+      # DBX_PUBLIC_BASE_PATH: /
+    restart: unless-stopped
+
+  mcp-gateway:
+    image: node:22-alpine
+    pull_policy: missing
+    working_dir: /app
+    command: ["node", "src/server.mjs"]
+    depends_on:
+      - dbx
+    ports:
+      - "4225:4225"
+    volumes:
+      # 源码目录只读挂载；目录里必须有 src/ 和 bin/。
+      - /volume1/docker/dbx/plugins/mcp-token-gateway:/app:ro
+      # token 库与审计日志需要可写。
+      - /volume1/docker/dbx/data/mcp-gateway:/data
+    env_file:
+      - ./gateway.env
+    environment:
+      MCP_GATEWAY_UPSTREAM_URL: http://dbx:4224
+      MCP_GATEWAY_UPSTREAM_MCP_PATH: /mcp
+      MCP_GATEWAY_DATA_DIR: /data
+      MCP_GATEWAY_LISTEN_HOST: 0.0.0.0
+      MCP_GATEWAY_LISTEN_PORT: "4225"
+      MCP_GATEWAY_PUBLIC_MCP_PATH: /mcp
+      # 使用 dbx 默认 base path 时留空；若 dbx 用 /dbx，这里设为 /dbx 且上行设为 /dbx/mcp。
+      MCP_GATEWAY_DBX_BASE_PATH: ""
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4225/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    restart: unless-stopped
