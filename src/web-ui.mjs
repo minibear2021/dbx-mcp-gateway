@@ -5,6 +5,7 @@ export const WEB_UI_HTML = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <title>DBX MCP Token 管理</title>
 <style>
 :root{--bg:#f6f7f9;--card:#fff;--line:#e3e6eb;--text:#1f2430;--muted:#6b7280;--brand:#2563eb;--danger:#dc2626;--ok:#059669;--warn:#b45309}

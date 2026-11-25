@@ -36,7 +36,7 @@ export function resolveDataDir(overrides = {}) {
   return path.resolve(overrides.dataDir ?? env('DATA_DIR', path.resolve(process.cwd(), '.gateway-data')));
 }
 
-const RESERVED_PATHS = new Set(['/', '/ui', '/ui/', '/index.html', '/ui/config', '/healthz', '/favicon.ico', '/tokens', '/audit']);
+const RESERVED_PATHS = new Set(['/', '/ui', '/ui/', '/index.html', '/ui/config', '/healthz', '/favicon.ico', '/favicon.svg', '/tokens', '/audit']);
 
 export function loadConfig(overrides = {}) {
   const dataDir = resolveDataDir(overrides);

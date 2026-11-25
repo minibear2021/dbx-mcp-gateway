@@ -1,8 +1,10 @@
+import { readFile } from 'node:fs/promises';
 import { authorizeAdminRequest } from './admin-auth.mjs';
 import { normalizeBasePath, stripBasePath } from './config.mjs';
 import { WEB_UI_HTML } from './web-ui.mjs';
 
 const MAX_BODY_BYTES = 16 * 1024;
+const FAVICON_SVG_URL = new URL('../assets/favicon.svg', import.meta.url);
 
 function sendJson(res, status, payload) {
   const body = `${JSON.stringify(payload)}\n`;
@@ -37,9 +39,10 @@ export function createAdminHandler(config, store, audit) {
     const isUiConfig = req.method === 'GET' && pathname === '/ui/config';
     const isHealth = req.method === 'GET' && pathname === '/healthz';
     const isFavicon = req.method === 'GET' && pathname === '/favicon.ico';
+    const isFaviconSvg = req.method === 'GET' && pathname === '/favicon.svg';
     const isAdminApi = ['tokens', 'audit'].includes(segments[0]);
 
-    if (!isUi && !isUiConfig && !isHealth && !isFavicon && !isAdminApi) {
+    if (!isUi && !isUiConfig && !isHealth && !isFavicon && !isFaviconSvg && !isAdminApi) {
       sendJson(res, 404, { error: 'not_found' });
       return;
     }
@@ -72,6 +75,17 @@ export function createAdminHandler(config, store, audit) {
     if (isFavicon) {
       res.writeHead(204);
       res.end();
+      return;
+    }
+    if (isFaviconSvg) {
+      const body = await readFile(FAVICON_SVG_URL);
+      res.writeHead(200, {
+        'content-type': 'image/svg+xml; charset=utf-8',
+        'content-length': body.length,
+        'cache-control': 'public, max-age=86400',
+        'x-content-type-options': 'nosniff',
+      });
+      res.end(body);
       return;
     }
 

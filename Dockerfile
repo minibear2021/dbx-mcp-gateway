@@ -12,6 +12,7 @@ WORKDIR /app
 COPY plugins/mcp-token-gateway/package.json ./
 COPY plugins/mcp-token-gateway/src ./src
 COPY plugins/mcp-token-gateway/bin ./bin
+COPY plugins/mcp-token-gateway/assets ./assets
 
 RUN mkdir -p /app/gateway-data && chown -R node:node /app
 USER node
