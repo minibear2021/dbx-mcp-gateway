@@ -39,6 +39,8 @@ tr:last-child td{border-bottom:none}
 .pill.expired{background:#fef3c7;color:var(--warn)}
 .actions{display:flex;gap:4px;flex-wrap:wrap}
 .actions button{padding:4px 8px;font-size:12px}
+.link{border:0;background:transparent;color:var(--brand);padding:0;font:inherit;cursor:pointer;text-decoration:underline}
+.link:hover{background:transparent;color:#1d4ed8}
 code{display:block;background:#f3f4f6;border:1px solid var(--line);border-radius:8px;padding:12px;word-break:break-all;font-size:13px}
 dialog{border:1px solid var(--line);border-radius:12px;padding:22px;max-width:560px;width:calc(100% - 40px);box-shadow:0 20px 60px rgba(0,0,0,.18)}
 dialog::backdrop{background:rgba(15,23,42,.35)}
@@ -78,11 +80,26 @@ dialog::backdrop{background:rgba(15,23,42,.35)}
 </div>
 </section>
 
-<section class="card">
+<section class="card" id="tokenCard">
 <table>
 <thead><tr><th>用户备注</th><th>说明</th><th>状态</th><th>创建</th><th>轮换</th><th>最近使用</th><th>过期</th><th>次数</th><th>操作</th></tr></thead>
 <tbody id="tokenRows"></tbody>
 </table>
+</section>
+
+<section class="card" id="detailCard" hidden>
+<div class="row">
+<button id="detailBackBtn">← 返回列表</button>
+<h2 id="detailTitle" style="margin:0">用户调用详情</h2>
+<span class="spacer"></span>
+<button id="detailRefreshBtn">刷新记录</button>
+</div>
+<p class="muted" id="detailMeta" style="margin:12px 0"></p>
+<table>
+<thead><tr><th>时间</th><th>方法</th><th>路径</th><th>状态</th><th>结果</th><th>耗时</th><th>来源 IP</th><th>事件</th></tr></thead>
+<tbody id="detailRows"></tbody>
+</table>
+<p class="muted" id="detailEmpty" hidden>该用户暂无 MCP 调用记录。</p>
 </section>
 
 <section class="card" id="auditCard" hidden>
@@ -119,6 +136,7 @@ dialog::backdrop{background:rgba(15,23,42,.35)}
 (function(){
 "use strict";
 var editingId = null;
+var currentDetail = null;
 var apiBase = "";
 var dbxWebUrl = "";
 
@@ -200,7 +218,13 @@ function renderTokens(tokens){
   byId("summary").textContent = "共 " + tokens.length + " 个 token";
   tokens.forEach(function(item){
     var row = el("tr");
-    row.appendChild(el("td", "", item.label));
+    var userCell = el("td");
+    var userLink = el("button", "link", item.label);
+    userLink.type = "button";
+    userLink.title = "查看该用户的 MCP 调用记录";
+    userLink.addEventListener("click", function(){ openDetail(item); });
+    userCell.appendChild(userLink);
+    row.appendChild(userCell);
     row.appendChild(el("td", "muted", item.note || "-"));
     var statusText = item.status;
     if (item.expiresAt && Date.parse(item.expiresAt) <= Date.now()) statusText = "expired";
@@ -228,6 +252,62 @@ async function loadTokens(){
   try {
     var data = await api("GET", "/tokens");
     renderTokens(data.tokens);
+  } catch (error) { handleError(error); }
+}
+
+function fmtDuration(value){
+  if (typeof value !== "number" || !isFinite(value)) return "-";
+  return value + " ms";
+}
+
+function openDetail(item){
+  currentDetail = item;
+  byId("tokenCard").hidden = true;
+  byId("auditCard").hidden = true;
+  byId("detailCard").hidden = false;
+  byId("detailTitle").textContent = "用户调用详情 · " + item.label;
+  var statusText = item.status;
+  if (item.expiresAt && Date.parse(item.expiresAt) <= Date.now()) statusText = "expired";
+  byId("detailMeta").textContent =
+    "Token ID: " + item.id +
+    " ｜ 状态: " + statusText +
+    " ｜ 调用次数: " + (item.useCount || 0) +
+    " ｜ 最近使用: " + fmt(item.lastUsedAt) +
+    " ｜ 说明: " + (item.note || "-");
+  loadDetail();
+}
+
+function closeDetail(){
+  currentDetail = null;
+  byId("detailCard").hidden = true;
+  byId("tokenCard").hidden = false;
+  loadTokens();
+}
+
+async function loadDetail(){
+  if (!currentDetail) return;
+  try {
+    var query = "/audit?limit=500&event=mcp&tokenId=" + encodeURIComponent(currentDetail.id);
+    var data = await api("GET", query);
+    var body = byId("detailRows");
+    body.textContent = "";
+    var entries = data.entries || [];
+    entries.slice().reverse().forEach(function(entry){
+      var row = el("tr");
+      var values = [
+        fmt(entry.ts),
+        entry.method,
+        entry.path,
+        entry.status,
+        entry.reason,
+        fmtDuration(entry.durationMs),
+        entry.ip,
+        entry.event
+      ];
+      values.forEach(function(value){ row.appendChild(el("td", "", value === undefined ? "-" : value)); });
+      body.appendChild(row);
+    });
+    byId("detailEmpty").hidden = entries.length > 0;
   } catch (error) { handleError(error); }
 }
 
@@ -320,7 +400,12 @@ byId("dbxContinueBtn").addEventListener("click", async function(){
 });
 byId("newBtn").addEventListener("click", function(){ openEdit(null); });
 byId("refreshBtn").addEventListener("click", loadTokens);
-byId("auditBtn").addEventListener("click", loadAudit);
+byId("auditBtn").addEventListener("click", function(){
+  if (currentDetail) closeDetail();
+  loadAudit();
+});
+byId("detailBackBtn").addEventListener("click", closeDetail);
+byId("detailRefreshBtn").addEventListener("click", loadDetail);
 byId("editForm").addEventListener("submit", function(event){
   event.preventDefault();
   saveEdit();

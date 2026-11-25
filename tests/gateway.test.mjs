@@ -135,6 +135,34 @@ test('无效 token、缺失 token 与错误路径被拒绝', async (t) => {
   assert.equal(seen.length, 0);
 });
 
+test('每次 MCP 调用都写入审计，且可按 tokenId / event 过滤出单个用户的记录', async (t) => {
+  const { admin, mcp } = await setup(t);
+
+  const a = (await admin('POST', '/tokens', { body: { label: '张三' } })).body;
+  const b = (await admin('POST', '/tokens', { body: { label: '李四' } })).body;
+
+  assert.equal((await mcp(a.token)).status, 200);
+  assert.equal((await mcp(a.token)).status, 200);
+  assert.equal((await mcp('bad-token')).status, 401);
+  assert.equal((await mcp(b.token)).status, 200);
+
+  const aEntries = (await admin('GET', `/audit?event=mcp&tokenId=${a.id}&limit=50`)).body.entries;
+  assert.equal(aEntries.length, 2);
+  assert.ok(aEntries.every((entry) => entry.status === 200 && entry.reason === 'ok'));
+  assert.ok(aEntries.every((entry) => entry.user === '张三' && entry.tokenId === a.id));
+  assert.ok(aEntries.every((entry) => typeof entry.durationMs === 'number'));
+  assert.ok(aEntries.every((entry) => typeof entry.ts === 'string' && entry.path === '/mcp'));
+
+  const bEntries = (await admin('GET', `/audit?event=mcp&tokenId=${b.id}&limit=50`)).body.entries;
+  assert.equal(bEntries.length, 1);
+  assert.equal(bEntries[0].user, '李四');
+
+  const allMcp = (await admin('GET', '/audit?event=mcp&limit=50')).body.entries;
+  assert.equal(allMcp.length, 4);
+  const adminEvents = (await admin('GET', '/audit?event=admin&limit=50')).body.entries;
+  assert.equal(adminEvents.length, 2);
+});
+
 test('管理 API：仅 dbx 会话可用；列表脱敏、禁用/启用、轮换', async (t) => {
   const { admin, mcp } = await setup(t);
 
@@ -178,6 +206,8 @@ test('Web UI 与 MCP 共用同一个 4225 端口；页面不再包含管理口�
     assert.doesNotMatch(html, /管理口令/);
     assert.doesNotMatch(html, /type="password"/);
     assert.match(html, /\/audit\?limit=50/);
+    assert.match(html, /id="detailCard"/);
+    assert.match(html, /event=mcp&tokenId=/);
   }
 
   const config = await fetch(`${baseUrl}/ui/config`).then((response) => response.json());

@@ -28,7 +28,7 @@
 - 网关把 `Host` 重写为 `dbx:4224`，剥离 `Origin` 和 `Cookie`，这样 dbx 的 Host/Origin 策略由网关侧统一处理。
 - token 在磁盘上只保存 SHA-256；明文仅在创建/轮换时返回一次。校验使用恒定时间比较并遍历全部记录。
 - 状态变更即时生效，无需重启 dbx 或网关。
-- 所有 MCP 请求与 token 管理操作写入 `audit.jsonl`（含 token id、用户备注、路径、状态、原因），不记录 token 明文。
+- **每一次** MCP 调用（含成功与失败）与 token 管理操作都写入 `audit.jsonl`，包含 token id、用户备注、时间、路径、状态、结果原因、耗时和来源 IP；不记录 token 明文。
 
 ## 管理鉴权：只复用 dbx Web 会话
 
@@ -126,6 +126,10 @@ $EXEC env MCP_GATEWAY_DBX_COOKIE='dbx_session=<会话值>' \
 
 $EXEC env MCP_GATEWAY_DBX_COOKIE='dbx_session=<会话值>' \
   node bin/dbx-mcp-gateway.mjs audit --limit 50
+
+# 只看某个用户的 MCP 调用记录
+$EXEC env MCP_GATEWAY_DBX_COOKIE='dbx_session=<会话值>' \
+  node bin/dbx-mcp-gateway.mjs audit --event mcp --token-id <token-id> --limit 200
 ```
 
 也可用 `--cookie 'dbx_session=...'` 代替环境变量。`token add` / `token rotate` 会打印一次明文 token，请立即交给对应客户端保存。
@@ -142,7 +146,8 @@ $EXEC env MCP_GATEWAY_DBX_COOKIE='dbx_session=<会话值>' \
 - 新建 / 编辑（备注、说明、过期时间）
 - 轮换、禁用、启用、删除（二次确认）
 - 新建和轮换后弹窗展示一次性明文 token，带复制按钮
-- 查看最近 50 条审计记录
+- 点击 token 列表中的**用户备注**进入该用户详情页，查看其**每一次 MCP 调用记录**（时间、方法、路径、状态、结果、耗时、来源 IP），可刷新或返回列表
+- 查看全局最近 50 条审计记录（含管理操作）
 
 页面本身无需鉴权；页面内所有管理 API 调用都依赖浏览器自动携带的 `dbx_session` Cookie（`credentials: same-origin`）。收到 401 会自动退回登录入口。
 
@@ -163,7 +168,8 @@ $EXEC env MCP_GATEWAY_DBX_COOKIE='dbx_session=<会话值>' \
 | `POST` | `/tokens/:id/disable` | 禁用 |
 | `POST` | `/tokens/:id/enable` | 重新启用 |
 | `DELETE` | `/tokens/:id` | 删除 |
-| `GET` | `/audit?limit=100` | 审计记录 |
+| `GET` | `/audit?limit=100` | 审计记录（按时间升序，页面倒序显示） |
+| `GET` | `/audit?event=mcp&tokenId=<id>&limit=500` | 按事件与用户 token 过滤，详情视角用 |
 
 另提供免鉴权的 `GET /ui/config`，返回 API 前缀与 dbx Web 登录链接供页面使用。
 

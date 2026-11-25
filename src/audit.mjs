@@ -29,15 +29,25 @@ export class AuditLog {
     }
   }
 
-  read(limit = 100) {
+  /**
+   * 读取审计条目。可按 tokenId / event / user 精确过滤，返回最新的 limit 条。
+   */
+  read(limit = 100, filter = {}) {
     if (!fs.existsSync(this.filePath)) return [];
     const lines = fs.readFileSync(this.filePath, 'utf8').split('\n').filter(Boolean);
-    return lines.slice(-Math.min(Math.max(limit, 1), MAX_LINES)).map((line) => {
+    const entries = lines.map((line) => {
       try {
         return JSON.parse(line);
       } catch {
         return { raw: line };
       }
     });
+    const filtered = entries.filter((entry) => {
+      if (filter.tokenId && entry.tokenId !== filter.tokenId) return false;
+      if (filter.event && entry.event !== filter.event) return false;
+      if (filter.user && entry.user !== filter.user) return false;
+      return true;
+    });
+    return filtered.slice(-Math.min(Math.max(limit, 1), MAX_LINES));
   }
 }

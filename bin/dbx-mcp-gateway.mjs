@@ -43,7 +43,7 @@ const USAGE = `用法：
   dbx-mcp-gateway token disable <id>
   dbx-mcp-gateway token enable <id>
   dbx-mcp-gateway token remove <id>
-  dbx-mcp-gateway audit [--limit 100]
+  dbx-mcp-gateway audit [--limit 100] [--token-id <id>] [--event mcp|admin]
 
 网关地址默认 http://127.0.0.1:4225（MCP、Web UI、管理 API 共用），
 可用 MCP_GATEWAY_URL 覆盖。
@@ -103,8 +103,10 @@ async function main() {
   }
 
   if (command === 'audit') {
-    const limit = flags.limit ?? '100';
-    const result = await call('GET', `/audit?limit=${encodeURIComponent(limit)}`);
+    const params = new URLSearchParams({ limit: flags.limit ?? '100' });
+    if (flags['token-id']) params.set('tokenId', flags['token-id']);
+    if (flags.event) params.set('event', flags.event);
+    const result = await call('GET', `/audit?${params.toString()}`);
     if (result) print(result.entries);
     return;
   }

@@ -49,13 +49,18 @@ export function createProxyHandler(config, store, audit) {
     : new http.Agent({ keepAlive: true, maxSockets: 256 });
 
   return function proxyHandler(req, res) {
+    const startedAt = Date.now();
     const requestUrl = new URL(req.url || '/', 'http://gateway.local');
     const pathname = requestUrl.pathname;
     const remoteIp = req.socket.remoteAddress ?? '-';
     const originHeader = req.headers.origin;
     const origin = Array.isArray(originHeader) ? originHeader[0] : originHeader;
 
+    // 每个 MCP 请求只写一条审计；成功调用在响应结束时落盘。
+    let recorded = false;
     const recordAudit = (status, reason, tokenRecord = null) => {
+      if (recorded) return;
+      recorded = true;
       audit.append({
         event: 'mcp',
         tokenId: tokenRecord?.id ?? '-',
@@ -64,6 +69,7 @@ export function createProxyHandler(config, store, audit) {
         path: pathname,
         status,
         reason,
+        durationMs: Date.now() - startedAt,
         ip: remoteIp,
       });
     };
@@ -111,6 +117,12 @@ export function createProxyHandler(config, store, audit) {
       return;
     }
 
+    // token 校验通过后：响应结束时统一记录这一次 MCP 调用（含成功与上游非 2xx）。
+    res.on('finish', () => {
+      const status = res.statusCode || 200;
+      recordAudit(status, status >= 400 ? 'upstream-rejected' : 'ok', record);
+    });
+
     const headers = filterRequestHeaders(req.headers);
     headers.authorization = `Bearer ${config.upstreamToken}`;
     headers.host = upstream.host;
@@ -132,19 +144,19 @@ export function createProxyHandler(config, store, audit) {
         res.writeHead(status, filterResponseHeaders(upstreamRes.headers));
         upstreamRes.pipe(res);
         upstreamRes.on('error', () => {
-          recordAudit(status, 'upstream-stream-error', record);
+          recordAudit(502, 'upstream-stream-error', record);
           if (!res.writableEnded) res.destroy();
         });
       },
     );
 
     upstreamReq.on('error', () => {
+      recordAudit(502, 'upstream-error', record);
       if (!res.headersSent) {
         sendJson(res, 502, { error: 'upstream_unavailable' });
       } else if (!res.writableEnded) {
         res.destroy();
       }
-      recordAudit(res.statusCode || 502, 'upstream-error', record);
     });
 
     req.on('aborted', () => upstreamReq.destroy());
