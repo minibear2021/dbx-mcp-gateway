@@ -140,6 +140,8 @@ $EXEC env MCP_GATEWAY_DBX_COOKIE='dbx_session=<会话值>' \
 
 页面是单文件内联 HTML/CSS/JS，由网关直接提供，不新增端口、不依赖任何前端构建产物。
 
+**深浅色主题**：页面会优先读取同源 `localStorage` 中的 `dbx-theme`（dbx Web 的主题键），因此如果把 dbx Web 与网关放到同一反向代理后的同一 origin，dbx 切换明暗主题时本页会同步切换；也支持 `storage` 事件跨标签实时同步，仅同步明暗模式，不复制 dbx 的调色板或自定义颜色；同源且 dbx 已设置过主题时，独立切换按钮会自动隐藏，完全跟随 dbx。默认部署下 dbx Web 与网关使用不同端口（例如 8082 与 4225），浏览器按 origin 隔离 `localStorage`，无法自动读取，此时页面右上角会显示「深色 / 浅色」切换按钮，选择保存在本 origin 的 `mcp-gateway-theme`；未手动选择时跟随系统 `prefers-color-scheme`。
+
 支持的操作：
 
 - 列表展示每个 token 的用户备注、说明、状态、创建/轮换/最近使用/过期时间与调用次数

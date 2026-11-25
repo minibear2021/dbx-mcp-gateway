@@ -8,24 +8,29 @@ export const WEB_UI_HTML = `<!doctype html>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <title>DBX MCP Token 管理</title>
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--line:#e3e6eb;--text:#1f2430;--muted:#6b7280;--brand:#2563eb;--danger:#dc2626;--ok:#059669;--warn:#b45309}
+:root{color-scheme:light;--bg:#f6f7f9;--card:#fff;--line:#e3e6eb;--text:#1f2430;--muted:#6b7280;--brand:#2563eb;--brand-strong:#1d4ed8;--brand-soft-bg:#e8eefc;--danger:#dc2626;--danger-soft-bg:#fee2e2;--ok:#059669;--ok-soft-bg:#d1fae5;--warn:#b45309;--warn-soft-bg:#fef3c7;--hover:#f3f4f6;--focus:#bfdbfe;--code-bg:#f3f4f6;--backdrop:rgba(15,23,42,.35);--toast-bg:#111827;--toast-text:#fff;--on-brand:#fff;--shadow:0 1px 2px rgba(16,24,40,.04)}
+html.dark{color-scheme:dark;--bg:#0f172a;--card:#151e2e;--line:#2b3648;--text:#e5e7eb;--muted:#9ca3af;--brand:#60a5fa;--brand-strong:#93c5fd;--brand-soft-bg:#1e3a5f;--danger:#f87171;--danger-soft-bg:#4a1d1d;--ok:#34d399;--ok-soft-bg:#123a2e;--warn:#fbbf24;--warn-soft-bg:#463410;--hover:#1e293b;--focus:#334155;--code-bg:#0b1220;--backdrop:rgba(0,0,0,.55);--toast-bg:#f3f4f6;--toast-text:#111827;--on-brand:#0b1220;--shadow:none}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
 .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
 header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px}
 h1{font-size:22px;margin:0 0 4px}
 h2{font-size:16px;margin:0 0 10px}
 .sub{margin:0;color:var(--muted)}
-.badge{background:#e8eefc;color:#1d4ed8;border-radius:999px;padding:6px 12px;font-size:12px;white-space:nowrap}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.header-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{background:var(--brand-soft-bg);color:var(--brand-strong);border-radius:999px;padding:6px 12px;font-size:12px;white-space:nowrap}
+.theme-btn{display:inline-flex;align-items:center;gap:6px}
+.theme-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
 .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .spacer{flex:1}
-input[type=text],input[type=datetime-local]{border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:inherit;background:#fff;min-width:220px}
-input:focus{outline:2px solid #bfdbfe;border-color:var(--brand)}
-button{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:8px;padding:8px 13px;font:inherit;cursor:pointer}
-button:hover{background:#f3f4f6}
-button.primary{background:var(--brand);border-color:var(--brand);color:#fff}
-button.primary:hover{background:#1d4ed8}
+input[type=text],input[type=datetime-local]{border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:inherit;background:var(--card);color:var(--text);min-width:220px}
+input:focus{outline:2px solid var(--focus);border-color:var(--brand)}
+button{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:8px 13px;font:inherit;cursor:pointer}
+button:hover{background:var(--hover)}
+button.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+button.primary:hover{background:var(--brand-strong);border-color:var(--brand-strong)}
 button.danger{color:var(--danger)}
 button.ghost{border-color:transparent;background:transparent;color:var(--muted)}
 .muted{color:var(--muted);font-size:13px}
@@ -35,29 +40,46 @@ th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);verti
 th{color:var(--muted);font-weight:600;white-space:nowrap}
 tr:last-child td{border-bottom:none}
 .pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px}
-.pill.active{background:#d1fae5;color:var(--ok)}
-.pill.disabled{background:#fee2e2;color:var(--danger)}
-.pill.expired{background:#fef3c7;color:var(--warn)}
+.pill.active{background:var(--ok-soft-bg);color:var(--ok)}
+.pill.disabled{background:var(--danger-soft-bg);color:var(--danger)}
+.pill.expired{background:var(--warn-soft-bg);color:var(--warn)}
 .actions{display:flex;gap:4px;flex-wrap:wrap}
 .actions button{padding:4px 8px;font-size:12px}
 .link{border:0;background:transparent;color:var(--brand);padding:0;font:inherit;cursor:pointer;text-decoration:underline}
-.link:hover{background:transparent;color:#1d4ed8}
-code{display:block;background:#f3f4f6;border:1px solid var(--line);border-radius:8px;padding:12px;word-break:break-all;font-size:13px}
-dialog{border:1px solid var(--line);border-radius:12px;padding:22px;max-width:560px;width:calc(100% - 40px);box-shadow:0 20px 60px rgba(0,0,0,.18)}
-dialog::backdrop{background:rgba(15,23,42,.35)}
+.link:hover{background:transparent;color:var(--brand-strong)}
+code{display:block;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:12px;word-break:break-all;font-size:13px;color:var(--text)}
+dialog{border:1px solid var(--line);border-radius:12px;padding:22px;max-width:560px;width:calc(100% - 40px);box-shadow:0 20px 60px rgba(0,0,0,.18);background:var(--card);color:var(--text)}
+dialog::backdrop{background:var(--backdrop)}
 .field{margin:10px 0}
 .field label{display:block;color:var(--muted);margin-bottom:4px}
 .field input{width:100%}
 .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 18px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--toast-bg);color:var(--toast-text);padding:10px 18px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s}
 #toast.show{opacity:1}
 </style>
+<script>
+(function(){
+  function systemDark(){ return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches); }
+  var mode = "";
+  try { mode = localStorage.getItem("dbx-theme") || localStorage.getItem("mcp-gateway-theme") || ""; } catch (error) {}
+  mode = String(mode).toLowerCase();
+  var dark = mode === "dark" || mode === "soft-dark" || mode.indexOf("system") >= 0 && systemDark() || (!mode && systemDark());
+  document.documentElement.classList.toggle("dark", dark);
+})();
+</script>
 </head>
 <body>
 <div class="wrap">
 <header>
 <div><h1>DBX MCP Token 管理</h1><p class="sub">多 Token · 用户备注 · 轮换 / 禁用 · 审计</p></div>
+<div class="header-tools">
 <div class="badge">单端口 4225 · MCP + 管理 UI</div>
+<button id="themeBtn" class="theme-btn" type="button" title="切换深浅色主题" aria-label="切换深浅色主题">
+<svg id="themeMoon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
+<svg id="themeSun" viewBox="0 0 24 24" aria-hidden="true" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+<span id="themeLabel">深色</span>
+</button>
+</div>
 </header>
 
 <section class="card" id="loginCard">
@@ -182,6 +204,51 @@ function showApp(){
 function handleError(error){
   toast(error.message || "请求失败");
 }
+
+var DBX_THEME_KEY = "dbx-theme";
+var GATEWAY_THEME_KEY = "mcp-gateway-theme";
+var darkQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+function systemDark(){ return !!(darkQuery && darkQuery.matches); }
+function normalizeMode(value){
+  var mode = String(value || "").toLowerCase();
+  if (mode === "dark" || mode === "soft-dark") return "dark";
+  if (mode === "light" || mode === "soft-light") return "light";
+  if (mode === "system" || mode === "soft-system") return "system";
+  return "";
+}
+function storedMode(){
+  try {
+    return normalizeMode(localStorage.getItem(DBX_THEME_KEY)) || normalizeMode(localStorage.getItem(GATEWAY_THEME_KEY));
+  } catch (error) {
+    return "";
+  }
+}
+function currentMode(){ return storedMode() || "system"; }
+function modeIsDark(mode){ return mode === "dark" || mode === "system" && systemDark(); }
+function dbxThemeAvailable(){
+  try { return !!normalizeMode(localStorage.getItem(DBX_THEME_KEY)); } catch (error) { return false; }
+}
+function applyTheme(mode){
+  var dark = modeIsDark(mode);
+  document.documentElement.classList.toggle("dark", dark);
+  var button = byId("themeBtn");
+  if (!button) return;
+  // 同源且 dbx 已有明确主题时完全跟随 dbx，不再显示独立切换按钮。
+  button.hidden = dbxThemeAvailable();
+  if (button.hidden) return;
+  var label = dark ? "浅色" : "深色";
+  var title = dark ? "切换到浅色主题" : "切换到深色主题";
+  byId("themeLabel").textContent = label;
+  button.title = title;
+  button.setAttribute("aria-label", title);
+  byId("themeMoon").style.display = dark ? "none" : "inline-block";
+  byId("themeSun").style.display = dark ? "inline-block" : "none";
+}
+function setTheme(mode){
+  try { localStorage.setItem(GATEWAY_THEME_KEY, mode); } catch (error) {}
+  applyTheme(mode);
+}
+function toggleTheme(){ setTheme(modeIsDark(currentMode()) ? "light" : "dark"); }
 
 async function api(method, path, body){
   var headers = {};
@@ -490,6 +557,17 @@ byId("copyEventBtn").addEventListener("click", async function(){
     toast("复制失败，请手动选择文本");
   }
 });
+
+byId("themeBtn").addEventListener("click", toggleTheme);
+window.addEventListener("storage", function(event){
+  if (event.key === DBX_THEME_KEY || event.key === GATEWAY_THEME_KEY) applyTheme(currentMode());
+});
+if (darkQuery) {
+  var onDarkChange = function(){ if (currentMode() === "system") applyTheme("system"); };
+  if (darkQuery.addEventListener) darkQuery.addEventListener("change", onDarkChange);
+  else if (darkQuery.addListener) darkQuery.addListener(onDarkChange);
+}
+applyTheme(currentMode());
 
 async function init(){
   try {

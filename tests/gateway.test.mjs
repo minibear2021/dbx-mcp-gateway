@@ -285,6 +285,10 @@ test('Web UI 与 MCP 共用同一个 4225 端口；页面不再包含管理口�
     assert.match(html, /MCP 方法/);
     assert.match(html, /调用参数（脱敏）/);
     assert.match(html, /showEventDetail/);
+    assert.match(html, /id="themeBtn"/);
+    assert.match(html, /dbx-theme/);
+    assert.match(html, /mcp-gateway-theme/);
+    assert.match(html, /html\.dark/);
     // 「最近请求」列表：去掉事件/方法/路径，原因改结果并补上耗时与客户端 IP。
     assert.match(html, /<th>时间<\/th><th>用户<\/th><th>Token ID<\/th><th>状态<\/th><th>结果<\/th><th>耗时<\/th><th>详情<\/th>/);
     assert.match(html, /客户端 IP/);
