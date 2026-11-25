@@ -13,9 +13,6 @@ data/
 tokens.json
 audit.jsonl
 
-# 构建产物：用 node dbxp/package.mjs 可重新生成
-dist/
-
 # Node
 node_modules/
 npm-debug.log*

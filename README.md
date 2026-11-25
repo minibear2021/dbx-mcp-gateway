@@ -213,19 +213,7 @@ npm start   # 需设置 MCP_GATEWAY_UPSTREAM_TOKEN
 
 代码零运行时依赖，只用 Node 20+ 内置模块。
 
-## `.dbxp` 本地安装包
-
-可用 dbx 自带的 packager 生成一个未签名候选包，在 dbx Web 插件管理里做本地安装验证：
-
-```bash
-cd /path/to/dbx
-node plugins/mcp-token-gateway/dbxp/package.mjs
-# 产物：plugins/mcp-token-gateway/dist/dbx.mcp.gateway-1.0.0-universal.dbxp
-```
-
-安装前需要在 dbx 服务进程设置 `DBX_ALLOW_UNSIGNED_PLUGINS=1`，并在 Web 本地安装时勾选允许未签名包。包内包含完整网关源码和一个工作台说明页。
-
-**边界**：dbx 插件体系没有 HTTP 鉴权扩展点，也没有安装/启动钩子；`.dbxp` 不会自动启动网关，也不会改变 dbx 的 MCP 鉴权。真正生效的仍是前面 compose 方式启动的网关服务。
+> **部署方式**：本项目只通过 Docker Compose 启动。dbx 插件体系没有 HTTP 鉴权扩展点，也没有安装/启动钩子，无法作为插件在 dbx 内启动，因此不提供 `.dbxp` 包、也不上插件市场。
 
 ## 安全建议
 
