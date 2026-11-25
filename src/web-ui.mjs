@@ -102,7 +102,7 @@ dialog::backdrop{background:var(--backdrop)}
 
 <section class="card" id="tokenCard">
 <table>
-<thead><tr><th>用户</th><th>备注</th><th>状态</th><th>创建时间</th><th>更新时间</th><th>最近使用</th><th>到期时间</th><th>使用次数</th><th>操作</th></tr></thead>
+<thead><tr><th>用户</th><th>备注</th><th>状态</th><th>创建时间</th><th>更新时间</th><th>最近使用</th><th>到期时间</th><th>累计使用</th><th>操作</th></tr></thead>
 <tbody id="tokenRows"></tbody>
 </table>
 </section>
@@ -411,7 +411,7 @@ function openDetail(item){
   byId("detailMeta").textContent =
     "密钥编号：" + item.id +
     " ｜ 状态：" + statusLabel(statusText) +
-    " ｜ 使用次数：" + (item.useCount || 0) +
+    " ｜ 累计使用：" + (item.useCount || 0) + " 次" +
     " ｜ 最近使用：" + fmt(item.lastUsedAt) +
     " ｜ 备注：" + (item.note || "-");
   loadDetail();
@@ -426,7 +426,7 @@ function closeDetail(){
 
 function renderPagination(){
   var totalPages = Math.max(1, Math.ceil(detailTotal / detailPageSize));
-  byId("detailPageInfo").textContent = "第 " + detailPage + " / " + totalPages + " 页 · 共 " + detailTotal + " 条记录";
+  byId("detailPageInfo").textContent = "第 " + detailPage + " / " + totalPages + " 页 · 可查看 " + detailTotal + " 条记录";
   byId("detailPrevBtn").disabled = detailPage <= 1;
   byId("detailNextBtn").disabled = detailPage >= totalPages;
 }
