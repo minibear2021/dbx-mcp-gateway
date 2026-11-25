@@ -210,6 +210,32 @@ test('MCP 调用记录提取工具名与操作参数，敏感字段脱敏，且�
   assert.equal(serialized.includes('abcdef123456'), false);
 });
 
+test('真实客户端 IP：默认忽略代理头，trustProxy 时取 X-Forwarded-For 首段并保留直连地址', async (t) => {
+  const plain = await setup(t);
+  const withoutTrust = (await plain.admin('POST', '/tokens', { body: { label: '未信任代理' } })).body;
+  await plain.mcp(withoutTrust.token, {
+    headers: { 'x-forwarded-for': '203.0.113.9, 10.0.0.1', 'x-real-ip': '203.0.113.9' },
+  });
+  const plainEntry = (await plain.admin('GET', `/audit?event=mcp&tokenId=${withoutTrust.id}&limit=5`)).body.entries[0];
+  assert.equal(plainEntry.ip, '127.0.0.1');
+  assert.equal('remoteIp' in plainEntry, false);
+
+  const trusted = await setup(t, { trustProxy: true });
+  const withTrust = (await trusted.admin('POST', '/tokens', { body: { label: '经反向代理' } })).body;
+  await trusted.mcp(withTrust.token, {
+    headers: { 'x-forwarded-for': '203.0.113.9, 10.0.0.1', 'x-real-ip': '198.51.100.2' },
+  });
+  const trustedEntry = (await trusted.admin('GET', `/audit?event=mcp&tokenId=${withTrust.id}&limit=5`)).body.entries[0];
+  assert.equal(trustedEntry.ip, '203.0.113.9');
+  assert.equal(trustedEntry.remoteIp, '127.0.0.1');
+
+  // 伪造的非 IP 值不被采信。
+  const spoof = (await trusted.admin('POST', '/tokens', { body: { label: '伪造来源' } })).body;
+  await trusted.mcp(spoof.token, { headers: { 'x-forwarded-for': 'not-an-ip' } });
+  const spoofEntry = (await trusted.admin('GET', `/audit?event=mcp&tokenId=${spoof.id}&limit=5`)).body.entries[0];
+  assert.equal(spoofEntry.ip, '127.0.0.1');
+});
+
 test('管理 API：仅 dbx 会话可用；列表脱敏、禁用/启用、轮换', async (t) => {
   const { admin, mcp } = await setup(t);
 
@@ -259,6 +285,10 @@ test('Web UI 与 MCP 共用同一个 4225 端口；页面不再包含管理口�
     assert.match(html, /MCP 方法/);
     assert.match(html, /调用参数（脱敏）/);
     assert.match(html, /showEventDetail/);
+    // 「最近请求」列表：去掉事件/方法/路径，原因改结果并补上耗时与客户端 IP。
+    assert.match(html, /<th>时间<\/th><th>用户<\/th><th>Token ID<\/th><th>状态<\/th><th>结果<\/th><th>耗时<\/th><th>详情<\/th>/);
+    assert.match(html, /客户端 IP/);
+    assert.match(html, /直连地址（Docker 网关）/);
   }
 
   const config = await fetch(`${baseUrl}/ui/config`).then((response) => response.json());

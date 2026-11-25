@@ -96,7 +96,7 @@ dialog::backdrop{background:rgba(15,23,42,.35)}
 </div>
 <p class="muted" id="detailMeta" style="margin:12px 0"></p>
 <table>
-<thead><tr><th>时间</th><th>MCP 方法</th><th>状态</th><th>结果</th><th>耗时</th><th>来源 IP</th><th>详情</th></tr></thead>
+<thead><tr><th>时间</th><th>MCP 方法</th><th>状态</th><th>结果</th><th>耗时</th><th>客户端 IP</th><th>详情</th></tr></thead>
 <tbody id="detailRows"></tbody>
 </table>
 <p class="muted" id="detailEmpty" hidden>该用户暂无 MCP 调用记录。</p>
@@ -105,7 +105,7 @@ dialog::backdrop{background:rgba(15,23,42,.35)}
 <section class="card" id="auditCard" hidden>
 <h2>最近请求</h2>
 <table>
-<thead><tr><th>时间</th><th>事件</th><th>用户</th><th>Token ID</th><th>方法</th><th>路径</th><th>状态</th><th>原因</th><th>详情</th></tr></thead>
+<thead><tr><th>时间</th><th>用户</th><th>Token ID</th><th>状态</th><th>结果</th><th>耗时</th><th>详情</th></tr></thead>
 <tbody id="auditRows"></tbody>
 </table>
 </section>
@@ -273,7 +273,8 @@ var EVENT_LABELS = {
   method: "HTTP 方法", path: "路径", status: "状态码", reason: "结果",
   mcpMethod: "MCP 方法", mcpTool: "MCP 工具", mcpArgs: "调用参数（脱敏）",
   bytesIn: "接收字节", bytesOut: "发送字节",
-  durationMs: "耗时", ip: "来源 IP", ua: "User-Agent", action: "操作",
+  durationMs: "耗时", ip: "客户端 IP", remoteIp: "直连地址（Docker 网关）",
+  ua: "User-Agent", action: "操作",
 };
 function prettyArgs(text){
   try { return JSON.stringify(JSON.parse(text), null, 2); } catch (error) { return text; }
@@ -434,8 +435,8 @@ async function loadAudit(){
     body.textContent = "";
     data.entries.slice().reverse().forEach(function(entry){
       var row = el("tr");
-      [entry.ts, entry.event, entry.user, entry.tokenId, entry.method, entry.path, entry.status, entry.reason].forEach(function(value){
-        row.appendChild(el("td", "", value === undefined ? "-" : value));
+      [fmt(entry.ts), entry.user, entry.tokenId, entry.status, entry.reason, fmtDuration(entry.durationMs)].forEach(function(value){
+        row.appendChild(el("td", "", value === undefined || value === "" ? "-" : value));
       });
       var detailCell = el("td");
       detailCell.appendChild(actionButton("详情", "", function(){ showEventDetail(entry); }));

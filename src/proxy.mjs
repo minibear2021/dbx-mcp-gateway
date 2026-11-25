@@ -45,6 +45,36 @@ function sanitizeArg(key, value, depth = 0) {
   return String(value).slice(0, MAX_ARG_STRING);
 }
 
+/** 取 X-Forwarded-For 等代理头中的第一段，即最初发起请求的客户端地址。 */
+function firstForwarded(value) {
+  if (Array.isArray(value)) value = value[0];
+  if (typeof value !== 'string') return undefined;
+  const first = value.split(',')[0].trim();
+  return first || undefined;
+}
+
+/** 只接受看起来像 IPv4/IPv6 的短值，避免把伪造字符串写进审计日志。 */
+function isPlausibleIp(value) {
+  if (!value || value.length > 64) return false;
+  return /^[0-9a-fA-F:.]+$/.test(value) && /[.:]/.test(value);
+}
+
+/**
+ * 解析展示用的客户端 IP。
+ * Docker 网桥端口映射下 req.socket.remoteAddress 只是网桥网关（如 172.19.0.1），
+ * 真实客户端 IP 只能由前置反向代理通过 X-Forwarded-For 等头传进来。
+ * 未开启 trustProxy 时不采信这些头，防止客户端自行伪造。
+ */
+function resolveClientIp(req, config) {
+  const remoteIp = req.socket.remoteAddress ?? '-';
+  if (!config.trustProxy) return { clientIp: remoteIp, remoteIp };
+  const forwarded =
+    firstForwarded(req.headers['x-forwarded-for']) ??
+    firstForwarded(req.headers['x-real-ip']) ??
+    firstForwarded(req.headers['cf-connecting-ip']);
+  return { clientIp: isPlausibleIp(forwarded) ? forwarded : remoteIp, remoteIp };
+}
+
 function filterRequestHeaders(headers) {
   const result = {};
   for (const [name, value] of Object.entries(headers)) {
@@ -108,7 +138,7 @@ export function createProxyHandler(config, store, audit) {
     const requestId = `req_${randomUUID()}`;
     const requestUrl = new URL(req.url || '/', 'http://gateway.local');
     const pathname = requestUrl.pathname;
-    const remoteIp = req.socket.remoteAddress ?? '-';
+    const { clientIp, remoteIp } = resolveClientIp(req, config);
     const originHeader = req.headers.origin;
     const origin = Array.isArray(originHeader) ? originHeader[0] : originHeader;
     const ua = typeof req.headers['user-agent'] === 'string'
@@ -143,7 +173,9 @@ export function createProxyHandler(config, store, audit) {
         status,
         reason,
         durationMs: Date.now() - startedAt,
-        ip: remoteIp,
+        ip: clientIp,
+        // 直连对端（Docker 场景下通常是网桥网关），仅在代理头生效且与展示 IP 不同时记录。
+        ...(clientIp !== remoteIp ? { remoteIp } : {}),
         bytesIn,
         bytesOut,
         ...(ua ? { ua } : {}),

@@ -72,6 +72,14 @@ export function loadConfig(overrides = {}) {
     throw new Error('MCP_GATEWAY_LISTEN_PORT 必须是 0-65535 的整数（0 表示随机端口）。');
   }
 
+  // 是否信任前置反向代理传来的 X-Forwarded-For / X-Real-IP。
+  // Docker 端口映射场景下 socket 对端只是网桥网关，拿不到真实客户端 IP；
+  // 只有在网关前面放了会设置代理头的反向代理时，才应开启此开关。
+  const trustProxyRaw = overrides.trustProxy ?? env('TRUST_PROXY', '0');
+  const trustProxy = typeof trustProxyRaw === 'boolean'
+    ? trustProxyRaw
+    : ['1', 'true', 'yes', 'on'].includes(String(trustProxyRaw).toLowerCase());
+
   return {
     dataDir,
     tokensFile: path.join(dataDir, 'tokens.json'),
@@ -86,6 +94,7 @@ export function loadConfig(overrides = {}) {
     dbxBasePath,
     dbxAuthCheckUrl,
     dbxWebUrl,
+    trustProxy,
     allowedOrigins: overrides.allowedOrigins instanceof Set
       ? overrides.allowedOrigins
       : parseOrigins(overrides.allowedOrigins ?? env('ALLOWED_ORIGINS', '')),

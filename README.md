@@ -146,12 +146,33 @@ $EXEC env MCP_GATEWAY_DBX_COOKIE='dbx_session=<会话值>' \
 - 新建 / 编辑（备注、说明、过期时间）
 - 轮换、禁用、启用、删除（二次确认）
 - 新建和轮换后弹窗展示一次性明文 token，带复制按钮
-- 点击 token 列表中的**用户备注**进入该用户详情页，查看其**每一次 MCP 调用记录**（时间、MCP 方法/工具、状态、结果、耗时、来源 IP），可刷新或返回列表
-- **每条事件点「详情」**打开弹窗，显示该条记录的全部字段（事件 ID、Token ID、用户、HTTP 方法、路径、MCP 方法、MCP 工具名、**调用参数**、状态码、结果、耗时、收发字节数、User-Agent、来源 IP），并可复制完整 JSON
+- 点击 token 列表中的**用户备注**进入该用户详情页，查看其**每一次 MCP 调用记录**（时间、MCP 方法/工具、状态、结果、耗时、客户端 IP），可刷新或返回列表
+- **每条事件点「详情」**打开弹窗，显示该条记录的全部字段（事件 ID、Token ID、用户、HTTP 方法、路径、MCP 方法、MCP 工具名、**调用参数**、状态码、结果、耗时、收发字节数、User-Agent、客户端 IP、直连地址），并可复制完整 JSON
 - 「调用参数」展示本次工具调用的入参，例如 `dbx_execute_query` 的 `sql`、`database`、`connection_id`，`dbx_describe_table` 的 `table` 等——可以直接看到执行了什么命令、操作了哪个库表
-- 查看全局最近 50 条审计记录（含管理操作），同样可逐条点「详情」
+- 查看全局「最近请求」（最近 50 条，含管理操作），只显示时间、用户、Token ID、状态、结果、耗时；恒定的事件/方法/路径已省略，其余字段逐条点「详情」查看
 
 **调用次数 vs 审计条数为什么不一致**：列表里的「次数」是 token 校验通过的累计计数（`useCount`），从 token 创建起一直累加、永久保留；详情页的审计记录是**最近 500 条**且日志总量上限 5000 行，超出后自动裁剪最旧的记录。因此调用次数通常大于可查到的审计条数，属于正常现象，不是漏记。若要长期留存，请把审计目录挂到持久卷并定期归档 `audit.jsonl`。
+
+### 关于「来源 IP」为什么总是 Docker 网桥地址
+
+容器通过 Docker 端口映射对外服务时，网关在 TCP 层看到的对端永远是宿主机上的网桥网关（例如 `172.19.0.1`），真实客户端 IP 在这一层已经丢失。想记录真实 IP，只能在网关前面放一层**可信的反向代理**，由它设置 `X-Forwarded-For` / `X-Real-IP`，再让网关采信：
+
+1. 反向代理把请求转发到网关的 4225，并设置 `X-Forwarded-For: $remote_addr`（Nginx 写法）或等价头。
+2. 在 `gateway.env`（群晖）或 `.env`（通用 compose）里设 `MCP_GATEWAY_TRUST_PROXY=1`，重启网关。
+3. 此后审计里的「客户端 IP」取代理头最左值；同时另记「直连地址」（即网桥网关）便于对照。
+
+安全提醒：只有在网关**只接受来自该反向代理的流量**时才能开启 `TRUST_PROXY=1`，否则任何客户端都能伪造来源 IP。若没有前置代理，请保持默认值 `0`，此时「客户端 IP」就是直连地址。Nginx 示例：
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:4225;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Real-IP $remote_addr;
+}
+```
+
+注意：加了反向代理后，浏览器访问 dbx Web 与网关 UI 仍需使用同一个主机名，`dbx_session` Cookie 才会携带。
 
 安全边界：调用参数中的 `password` / `token` / `api_key` / `secret` / `cookie` 等敏感字段会替换为 `***`；单个字符串值限 2000 字符、整段参数限 6000 字符。**不记录 HTTP 响应正文、Bearer token 明文或 `dbx_session` Cookie**；SQL 语句本身会记录（这就是你要看的操作命令），因此请勿在 SQL 中明文写密码等凭据。参数超过采样上限（16KB）时只记录能识别到的部分。
 

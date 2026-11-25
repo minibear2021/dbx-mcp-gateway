@@ -37,6 +37,8 @@ services:
       MCP_GATEWAY_DBX_BASE_PATH: ${DBX_PUBLIC_BASE_PATH:-}
       MCP_GATEWAY_DBX_WEB_URL: ${MCP_GATEWAY_DBX_WEB_URL:-}
       MCP_GATEWAY_ALLOWED_ORIGINS: ${MCP_GATEWAY_ALLOWED_ORIGINS:-}
+      # 前置可信反向代理时设为 1，审计才采信 X-Forwarded-For / X-Real-IP。
+      MCP_GATEWAY_TRUST_PROXY: ${MCP_GATEWAY_TRUST_PROXY:-0}
     volumes:
       - mcp-gateway-data:/app/gateway-data
     restart: unless-stopped
