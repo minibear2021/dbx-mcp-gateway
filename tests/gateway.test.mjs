@@ -156,6 +156,14 @@ test('每次 MCP 调用都写入审计，且可按 tokenId / event 过滤出单�
   assert.ok(aEntries.every((entry) => entry.mcpMethod === 'initialize'));
   assert.ok(aEntries.every((entry) => typeof entry.bytesIn === 'number' && typeof entry.bytesOut === 'number'));
 
+  const page1 = (await admin('GET', `/audit?event=mcp&tokenId=${a.id}&limit=1`)).body;
+  assert.equal(page1.total, 2);
+  assert.equal(page1.entries.length, 1);
+  const page2 = (await admin('GET', `/audit?event=mcp&tokenId=${a.id}&limit=1&offset=1`)).body;
+  assert.equal(page2.total, 2);
+  assert.equal(page2.entries.length, 1);
+  assert.notEqual(page2.entries[0].id, page1.entries[0].id);
+
   const bEntries = (await admin('GET', `/audit?event=mcp&tokenId=${b.id}&limit=50`)).body.entries;
   assert.equal(bEntries.length, 1);
   assert.equal(bEntries[0].user, '李四');
@@ -286,6 +294,10 @@ test('Web UI 与 MCP 共用同一个 4225 端口；页面不再包含管理口�
     assert.match(html, /actionButton\("日志"/);
     assert.match(html, /id="detailCard"/);
     assert.match(html, /event=mcp&tokenId=/);
+    assert.match(html, /&offset=/);
+    assert.match(html, /id="detailPageSize"/);
+    assert.match(html, /id="detailPrevBtn"/);
+    assert.match(html, /id="detailNextBtn"/);
     assert.match(html, /id="eventDialog"/);
     assert.match(html, /<th>时间<\/th><th>操作<\/th><th>状态<\/th>/);
     assert.match(html, /操作参数/);

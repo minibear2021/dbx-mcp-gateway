@@ -25,9 +25,11 @@ h2{font-size:16px;margin:0 0 10px}
 .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .spacer{flex:1}
 input[type=text],input[type=datetime-local]{border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:inherit;background:var(--card);color:var(--text);min-width:220px}
-input:focus{outline:2px solid var(--focus);border-color:var(--brand)}
+input:focus,select:focus{outline:2px solid var(--focus);border-color:var(--brand)}
+select{border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit;background:var(--card);color:var(--text)}
 button{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:8px 13px;font:inherit;cursor:pointer}
 button:hover{background:var(--hover)}
+button:disabled{opacity:.45;cursor:not-allowed}
 button.primary{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
 button.primary:hover{background:var(--brand-strong);border-color:var(--brand-strong)}
 button.danger{color:var(--danger)}
@@ -113,6 +115,19 @@ dialog::backdrop{background:var(--backdrop)}
 <button id="detailRefreshBtn">刷新记录</button>
 </div>
 <p class="muted" id="detailMeta" style="margin:12px 0"></p>
+<div class="row" style="margin:0 0 12px">
+<span class="muted" id="detailPageInfo"></span>
+<span class="spacer"></span>
+<label class="muted" for="detailPageSize">每页</label>
+<select id="detailPageSize">
+<option value="10">10 条</option>
+<option value="20" selected>20 条</option>
+<option value="50">50 条</option>
+<option value="100">100 条</option>
+</select>
+<button id="detailPrevBtn" type="button">上一页</button>
+<button id="detailNextBtn" type="button">下一页</button>
+</div>
 <table>
 <thead><tr><th>时间</th><th>操作</th><th>状态</th><th>结果</th><th>耗时</th><th>访问来源</th><th>详情</th></tr></thead>
 <tbody id="detailRows"></tbody>
@@ -155,6 +170,10 @@ dialog::backdrop{background:var(--backdrop)}
 var editingId = null;
 var currentDetail = null;
 var currentEvent = null;
+var detailPage = 1;
+var detailPageSize = 20;
+var detailTotal = 0;
+var DETAIL_PAGE_SIZE_KEY = "mcp-gateway-page-size";
 var apiBase = "";
 var dbxWebUrl = "";
 
@@ -382,6 +401,8 @@ function showEventDetail(entry){
 
 function openDetail(item){
   currentDetail = item;
+  detailPage = 1;
+  detailTotal = 0;
   byId("tokenCard").hidden = true;
   byId("detailCard").hidden = false;
   byId("detailTitle").textContent = "成员使用详情 · " + item.label;
@@ -403,11 +424,27 @@ function closeDetail(){
   loadTokens();
 }
 
+function renderPagination(){
+  var totalPages = Math.max(1, Math.ceil(detailTotal / detailPageSize));
+  byId("detailPageInfo").textContent = "第 " + detailPage + " / " + totalPages + " 页 · 共 " + detailTotal + " 条记录";
+  byId("detailPrevBtn").disabled = detailPage <= 1;
+  byId("detailNextBtn").disabled = detailPage >= totalPages;
+}
 async function loadDetail(){
   if (!currentDetail) return;
   try {
-    var query = "/audit?limit=500&event=mcp&tokenId=" + encodeURIComponent(currentDetail.id);
+    var totalPages = Math.max(1, Math.ceil(detailTotal / detailPageSize));
+    if (detailPage > totalPages) detailPage = totalPages;
+    var offset = (detailPage - 1) * detailPageSize;
+    var query = "/audit?limit=" + detailPageSize + "&offset=" + offset + "&event=mcp&tokenId=" + encodeURIComponent(currentDetail.id);
     var data = await api("GET", query);
+    detailTotal = Number(data.total || 0);
+    totalPages = Math.max(1, Math.ceil(detailTotal / detailPageSize));
+    if (detailPage > totalPages) {
+      detailPage = totalPages;
+      await loadDetail();
+      return;
+    }
     var body = byId("detailRows");
     body.textContent = "";
     var entries = data.entries || [];
@@ -428,6 +465,7 @@ async function loadDetail(){
       body.appendChild(row);
     });
     byId("detailEmpty").hidden = entries.length > 0;
+    renderPagination();
   } catch (error) { handleError(error); }
 }
 
@@ -547,6 +585,27 @@ if (darkQuery) {
   else if (darkQuery.addListener) darkQuery.addListener(onDarkChange);
 }
 applyTheme(currentMode());
+
+try {
+  var savedPageSize = Number(localStorage.getItem(DETAIL_PAGE_SIZE_KEY));
+  if ([10, 20, 50, 100].indexOf(savedPageSize) >= 0) detailPageSize = savedPageSize;
+} catch (error) {}
+byId("detailPageSize").value = String(detailPageSize);
+byId("detailPrevBtn").addEventListener("click", function(){
+  if (detailPage > 1) { detailPage -= 1; loadDetail(); }
+});
+byId("detailNextBtn").addEventListener("click", function(){
+  var totalPages = Math.max(1, Math.ceil(detailTotal / detailPageSize));
+  if (detailPage < totalPages) { detailPage += 1; loadDetail(); }
+});
+byId("detailPageSize").addEventListener("change", function(){
+  var size = Number(byId("detailPageSize").value);
+  if ([10, 20, 50, 100].indexOf(size) < 0) return;
+  detailPageSize = size;
+  detailPage = 1;
+  try { localStorage.setItem(DETAIL_PAGE_SIZE_KEY, String(size)); } catch (error) {}
+  if (currentDetail) loadDetail();
+});
 
 async function init(){
   try {

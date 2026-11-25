@@ -105,14 +105,20 @@ export function createAdminHandler(config, store, audit) {
           return;
         }
         const limit = Number(url.searchParams.get('limit') ?? 100);
+        const offset = Number(url.searchParams.get('offset') ?? 0);
+        const safeLimit = Number.isFinite(limit) ? limit : 100;
+        const safeOffset = Number.isFinite(offset) ? Math.max(offset, 0) : 0;
         const filter = {
           tokenId: url.searchParams.get('tokenId') || undefined,
           event: url.searchParams.get('event') || undefined,
           user: url.searchParams.get('user') || undefined,
         };
         sendJson(res, 200, {
-          entries: audit.read(Number.isFinite(limit) ? limit : 100, filter),
+          entries: audit.read(safeLimit, filter, safeOffset),
+          total: audit.count(filter),
           filter,
+          limit: safeLimit,
+          offset: safeOffset,
         });
         return;
       }

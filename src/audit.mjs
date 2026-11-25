@@ -34,10 +34,8 @@ export class AuditLog {
     }
   }
 
-  /**
-   * 读取审计条目。可按 tokenId / event / user 精确过滤，返回最新的 limit 条。
-   */
-  read(limit = 100, filter = {}) {
+  /** 按 tokenId / event / user 过滤出匹配的条目（按写入顺序，越靠后越新）。 */
+  filtered(filter = {}) {
     if (!fs.existsSync(this.filePath)) return [];
     const lines = fs.readFileSync(this.filePath, 'utf8').split('\n').filter(Boolean);
     const entries = lines.map((line) => {
@@ -47,12 +45,29 @@ export class AuditLog {
         return { raw: line };
       }
     });
-    const filtered = entries.filter((entry) => {
+    return entries.filter((entry) => {
       if (filter.tokenId && entry.tokenId !== filter.tokenId) return false;
       if (filter.event && entry.event !== filter.event) return false;
       if (filter.user && entry.user !== filter.user) return false;
       return true;
     });
-    return filtered.slice(-Math.min(Math.max(limit, 1), MAX_LINES));
+  }
+
+  /**
+   * 读取审计条目。offset 表示从最新条目往前跳过的条数，用于分页。
+   * 返回值仍是按写入顺序（旧的在前，新的在后）。
+   */
+  read(limit = 100, filter = {}, offset = 0) {
+    const filtered = this.filtered(filter);
+    const size = Math.min(Math.max(limit, 1), MAX_LINES);
+    const skip = Math.max(offset, 0);
+    const end = filtered.length - skip;
+    if (end <= 0) return [];
+    const start = Math.max(0, end - size);
+    return filtered.slice(start, end);
+  }
+
+  count(filter = {}) {
+    return this.filtered(filter).length;
   }
 }
