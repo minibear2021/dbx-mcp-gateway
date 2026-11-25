@@ -271,9 +271,13 @@ function fmtDuration(value){
 var EVENT_LABELS = {
   id: "事件 ID", ts: "时间", event: "事件类型", tokenId: "Token ID", user: "用户备注",
   method: "HTTP 方法", path: "路径", status: "状态码", reason: "结果",
-  mcpMethod: "MCP 方法", mcpTool: "MCP 工具", bytesIn: "接收字节", bytesOut: "发送字节",
+  mcpMethod: "MCP 方法", mcpTool: "MCP 工具", mcpArgs: "调用参数（脱敏）",
+  bytesIn: "接收字节", bytesOut: "发送字节",
   durationMs: "耗时", ip: "来源 IP", ua: "User-Agent", action: "操作",
 };
+function prettyArgs(text){
+  try { return JSON.stringify(JSON.parse(text), null, 2); } catch (error) { return text; }
+}
 function rpcLabel(entry){
   var method = entry.mcpMethod;
   if (!method) return entry.method || "-";
@@ -294,6 +298,8 @@ function showEventDetail(entry){
       row.appendChild(el("code", "", fmt(value) + " (" + value + ")"));
     } else if (key === "durationMs") {
       row.appendChild(el("code", "", fmtDuration(value)));
+    } else if (key === "mcpArgs") {
+      row.appendChild(el("code", "", prettyArgs(value)));
     } else {
       row.appendChild(el("code", "", typeof value === "object" ? JSON.stringify(value) : String(value)));
     }

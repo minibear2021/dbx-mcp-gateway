@@ -18,8 +18,32 @@ const HOP_BY_HOP = new Set([
   'authorization',
 ]);
 
-// 只采样请求体开头少量字节用于识别 JSON-RPC 方法名，不记录请求正文。
-const MAX_BODY_SAMPLE = 4096;
+// 只采样请求体开头字节用于提取 JSON-RPC 调用摘要（方法、工具名、参数）。
+const MAX_BODY_SAMPLE = 16384;
+const MAX_ARG_STRING = 2000;
+const MAX_ARGS_JSON = 6000;
+
+// 参数中这些字段一律脱敏，不写入审计日志。
+const SENSITIVE_KEY = /pass(word|wd)?|secret|token|api[_-]?key|credential|authorization|cookie|private[_-]?key/i;
+
+function sanitizeArg(key, value, depth = 0) {
+  if (SENSITIVE_KEY.test(key)) return '***';
+  if (value === null || typeof value === 'boolean' || typeof value === 'number') return value;
+  if (typeof value === 'string') return value.slice(0, MAX_ARG_STRING);
+  if (Array.isArray(value)) {
+    if (depth >= 3) return `[${value.length} items]`;
+    return value.slice(0, 30).map((item) => sanitizeArg('', item, depth + 1));
+  }
+  if (typeof value === 'object') {
+    if (depth >= 3) return '[nested object]';
+    const result = {};
+    for (const [childKey, childValue] of Object.entries(value).slice(0, 40)) {
+      result[childKey] = sanitizeArg(childKey, childValue, depth + 1);
+    }
+    return result;
+  }
+  return String(value).slice(0, MAX_ARG_STRING);
+}
 
 function filterRequestHeaders(headers) {
   const result = {};
@@ -46,7 +70,7 @@ function sendJson(res, status, payload, extraHeaders = {}) {
   res.end(`${JSON.stringify(payload)}\n`);
 }
 
-/** 从请求体采样中只提取 JSON-RPC 的方法名与工具名，失败时返回空对象。 */
+/** 从请求体采样中提取 JSON-RPC 方法、工具名与脱敏后的调用参数。 */
 function extractRpcInfo(chunks) {
   if (chunks.length === 0) return {};
   const text = Buffer.concat(chunks).toString('utf8');
@@ -56,7 +80,14 @@ function extractRpcInfo(chunks) {
     const first = Array.isArray(payload) ? payload[0] : payload;
     if (first && typeof first.method === 'string') method = first.method;
     if (method === 'tools/call' && first.params && typeof first.params.name === 'string') {
-      return { mcpMethod: method.slice(0, 100), mcpTool: first.params.name.slice(0, 200) };
+      const result = { mcpMethod: method.slice(0, 100), mcpTool: first.params.name.slice(0, 200) };
+      if (first.params.arguments !== undefined) {
+        const safe = sanitizeArg('arguments', first.params.arguments);
+        let json = JSON.stringify(safe);
+        if (json.length > MAX_ARGS_JSON) json = `${json.slice(0, MAX_ARGS_JSON)}…（已截断）`;
+        result.mcpArgs = json;
+      }
+      return result;
     }
   } catch {
     // 请求体可能被采样上限截断，退回用正则取方法名。

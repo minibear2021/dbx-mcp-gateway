@@ -167,7 +167,7 @@ test('每次 MCP 调用都写入审计，且可按 tokenId / event 过滤出单�
   assert.ok(adminEvents.every((entry) => typeof entry.id === 'string' && entry.id.startsWith('evt_')));
 });
 
-test('MCP 调用记录提取 tools/call 的工具名，且绝不记录 token 或 Cookie', async (t) => {
+test('MCP 调用记录提取工具名与操作参数，敏感字段脱敏，且不记录 token 或 Cookie', async (t) => {
   const { admin, mcp } = await setup(t);
   const created = (await admin('POST', '/tokens', { body: { label: '工具调用者' } })).body;
 
@@ -175,7 +175,16 @@ test('MCP 调用记录提取 tools/call 的工具名，且绝不记录 token 或
     headers: { cookie: 'dbx_session=valid-session', 'user-agent': 'WorkBuddy/1.0' },
     body: JSON.stringify({
       jsonrpc: '2.0', id: 2, method: 'tools/call',
-      params: { name: 'dbx_execute_query', arguments: { sql: 'SELECT 1' } },
+      params: {
+        name: 'dbx_execute_query',
+        arguments: {
+          sql: 'SELECT * FROM sys_user WHERE id = 1',
+          database: 'db_newg3_main',
+          connection_id: 'conn-123',
+          password: 'super-secret-value',
+          api_key: 'abcdef123456',
+        },
+      },
     }),
   });
   assert.equal(response.status, 200);
@@ -187,10 +196,18 @@ test('MCP 调用记录提取 tools/call 的工具名，且绝不记录 token 或
   assert.equal(entry.bytesIn > 0, true);
   assert.equal(entry.bytesOut > 0, true);
 
+  const args = JSON.parse(entry.mcpArgs);
+  assert.equal(args.sql, 'SELECT * FROM sys_user WHERE id = 1');
+  assert.equal(args.database, 'db_newg3_main');
+  assert.equal(args.connection_id, 'conn-123');
+  assert.equal(args.password, '***');
+  assert.equal(args.api_key, '***');
+
   const serialized = JSON.stringify(entry);
   assert.equal(serialized.includes(created.token), false);
   assert.equal(serialized.includes('dbx_session'), false);
-  assert.equal(serialized.includes('SELECT 1'), false);
+  assert.equal(serialized.includes('super-secret-value'), false);
+  assert.equal(serialized.includes('abcdef123456'), false);
 });
 
 test('管理 API：仅 dbx 会话可用；列表脱敏、禁用/启用、轮换', async (t) => {
@@ -240,6 +257,7 @@ test('Web UI 与 MCP 共用同一个 4225 端口；页面不再包含管理口�
     assert.match(html, /event=mcp&tokenId=/);
     assert.match(html, /id="eventDialog"/);
     assert.match(html, /MCP 方法/);
+    assert.match(html, /调用参数（脱敏）/);
     assert.match(html, /showEventDetail/);
   }
 
