@@ -236,6 +236,31 @@ npm start   # 需设置 MCP_GATEWAY_UPSTREAM_TOKEN
 
 代码零运行时依赖，只用 Node 20+ 内置模块。
 
+## 版本与 Docker 镜像发布
+
+版本号以 `package.json` 的 `version` 为唯一来源（当前 `1.1.0`）。发布时版本号会写入镜像标签、`org.opencontainers.image.version` 标签以及容器内的 `MCP_GATEWAY_VERSION` 环境变量。
+
+推送到 `master` / `main` 且 `package.json` 版本发生变化，或推送 `v<版本号>` 标签（例如 `v1.1.0`）时，GitHub Actions 会自动构建镜像并推送到 GHCR：
+
+- `ghcr.io/minibear2021/dbx-mcp-gateway:1.1.0`
+- `ghcr.io/minibear2021/dbx-mcp-gateway:v1.1.0`
+- `ghcr.io/minibear2021/dbx-mcp-gateway:latest`
+
+推荐发布流程：
+
+```bash
+# 先修改 package.json 的 version，例如 1.1.0 -> 1.2.0
+git add package.json
+git commit -m "chore: release v1.2.0"
+git tag v1.2.0
+git push origin master
+git push origin v1.2.0
+```
+
+标签版本与 `package.json` 不一致时工作流会直接失败并提示。也可以在 GitHub 页面手动触发（Actions → Build and publish Docker image → Run workflow），此时使用当前 `package.json` 版本。
+
+群晖改用 GHCR 镜像时，把 compose 中 `mcp-gateway` 服务的 `build:` 段替换为 `image: ghcr.io/minibear2021/dbx-mcp-gateway:1.1.0`。若 GHCR 包为私有，需先在 GitHub 生成带 `read:packages` 权限的令牌，并在 NAS 上执行 `docker login ghcr.io -u <用户名> -p <令牌>`；公开包可直接拉取。已有的群晖本地构建方式不受影响，本地构建的镜像版本显示为 `dev`。
+
 > **部署方式**：本项目只通过 Docker Compose 启动。dbx 插件体系没有 HTTP 鉴权扩展点，也没有安装/启动钩子，无法作为插件在 dbx 内启动，因此不提供 `.dbxp` 包、也不上插件市场。
 
 ## 安全建议

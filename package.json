@@ -1,6 +1,6 @@
 {
   "name": "dbx-mcp-gateway",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "DBX MCP Streamable HTTP 多 Token 前置网关插件（不修改 dbx 主项目）",

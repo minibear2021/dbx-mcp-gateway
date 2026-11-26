@@ -1,6 +1,12 @@
 FROM node:22-alpine AS runtime
 
+ARG VERSION=dev
+LABEL org.opencontainers.image.title="DBX MCP Gateway" \
+      org.opencontainers.image.description="DBX MCP Streamable HTTP multi-token gateway" \
+      org.opencontainers.image.version="${VERSION}"
+
 ENV NODE_ENV=production \
+    MCP_GATEWAY_VERSION=${VERSION} \
     MCP_GATEWAY_DATA_DIR=/app/gateway-data \
     MCP_GATEWAY_LISTEN_HOST=0.0.0.0 \
     MCP_GATEWAY_LISTEN_PORT=4225 \
