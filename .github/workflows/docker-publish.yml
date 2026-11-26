@@ -62,8 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Dockerfile 沿用 dbx 主项目布局：COPY plugins/mcp-token-gateway/...
-      # 这里在临时目录中还原该布局，避免改动群晖现有 Compose 的构建上下文。
+      # 按 Dockerfile 预期的目录结构准备构建上下文。
       - name: Prepare build context
         shell: bash
         run: |

@@ -1,18 +1,13 @@
-# 与 deploy/docker-compose.yml 叠加使用：
+# DBX MCP Gateway 叠加配置，与 dbx 基础 compose 文件配合使用：
 #   docker compose --project-directory . \
 #     -f deploy/docker-compose.yml \
 #     -f plugins/mcp-token-gateway/docker-compose.mcp-gateway.yml \
 #     --env-file plugins/mcp-token-gateway/.env up -d
 #
-# 说明：
-# 1. 不修改 dbx 主项目的任何文件；这里只覆盖环境变量并增加一个网关服务。
-# 2. dbx 的 /mcp 仍只认一个内部 token（DBX_MCP_INTERNAL_TOKEN）。
-#    客户端拿到的是本插件管理的多个 token，由网关转换后转发。
-# 3. MCP、Web UI、管理 API 全部复用网关的 4225 端口；不再有 4226 管理口。
-# 4. 管理功能只复用 dbx Web 会话（dbx_session Cookie），没有独立管理口令。
-#    浏览器访问 dbx Web 与网关 UI 必须使用同一个主机名（localhost 或 127.0.0.1）。
-# 5. 如不希望 dbx 的 4224 端口直接暴露到公网，请在你自己的 compose 中
-#    移除基础文件里 dbx 的 "4224:4224" 端口映射，只保留网关的 4225。
+# 特性：
+#   - MCP、Web UI 与管理界面统一使用 4225 端口。
+#   - 管理界面复用 dbx Web 登录会话，无需额外凭据。
+#   - dbx Web 与网关 UI 请使用相同的主机名访问。
 
 services:
   dbx:

@@ -243,7 +243,7 @@ function applyTheme(mode){
   document.documentElement.classList.toggle("dark", dark);
   var button = byId("themeBtn");
   if (!button) return;
-  // 同源且 dbx 已有明确主题时完全跟随 dbx，不再显示独立切换按钮。
+  // 同源且已同步 dbx 主题时，独立切换按钮自动隐藏。
   button.hidden = dbxThemeAvailable();
   if (button.hidden) return;
   var label = dark ? "浅色" : "深色";

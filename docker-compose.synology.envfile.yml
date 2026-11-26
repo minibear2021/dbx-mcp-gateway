@@ -1,15 +1,14 @@
-# 群晖 Container Manager 专用：不依赖 .env 插值，使用可见的 gateway.env 注入变量。
+# DBX MCP Gateway 部署文件（群晖 Container Manager，使用 gateway.env 注入配置）。
 #
-# 部署目录（/volume1/docker/dbx/）应类似：
-#   compose.yaml                        <- 把本文件全文复制过去
-#   gateway.env                         <- 从 gateway.env.example 复制并填写
-#   data/                               <- dbx 数据目录
-#   data/mcp-gateway/                   <- 网关 token 库与审计日志（自动生成）
+# 部署目录结构：
+#   compose.yaml          本文件
+#   gateway.env           从 gateway.env.example 创建并填写
+#   data/                 dbx 数据目录
+#   data/mcp-gateway/     网关 token 库与审计日志
 #
-# 网关源码已包含在镜像中，不再需要挂载 plugins/mcp-token-gateway 目录。
-# 升级网关：把下方 mcp-gateway 的 image 标签改为新版本号，重新拉取并启动容器。
-# 关键点：gateway.env 里的两个 TOKEN 必须填同一个随机值。
-# 浏览器访问 dbx Web(8082) 与网关 UI(4225) 要用同一个主机名/IP，否则 Cookie 不会带上。
+# 升级：更新 mcp-gateway 的镜像版本号后重新拉取并启动服务。
+# gateway.env 中的两个内部令牌必须保持一致。
+# dbx Web 与网关 UI 请使用相同的主机名访问，以复用登录会话。
 
 services:
   dbx:
@@ -36,7 +35,7 @@ services:
     ports:
       - "4225:4225"
     volumes:
-      # token 库与审计日志需要持久化；镜像内已包含源码，无需再挂载源码目录。
+      # token 库与审计日志的持久化目录。
       - /volume1/docker/dbx/data/mcp-gateway:/data
     env_file:
       - ./gateway.env

@@ -45,7 +45,7 @@ const USAGE = `用法：
   dbx-mcp-gateway token remove <id>
   dbx-mcp-gateway audit [--limit 100] [--token-id <id>] [--event mcp|admin]
 
-网关地址默认 http://127.0.0.1:4225（MCP、Web UI、管理 API 共用），
+网关地址默认 http://127.0.0.1:4225（MCP 与管理界面共用），
 可用 MCP_GATEWAY_URL 覆盖。
 
 管理鉴权只复用 dbx Web 会话：

@@ -107,7 +107,7 @@ export function isPublicMcpPath(pathname, config) {
   return stripBasePath(pathname, config.dbxBasePath) === config.publicMcpLocalPath;
 }
 
-/** CLI 访问网关的地址；MCP、Web UI、管理 API 现在都是同一个端口。 */
+/** CLI 访问网关的地址；所有服务共用同一端口。 */
 export function resolveGatewayBaseUrl() {
   const explicit = process.env[`${ENV_PREFIX}URL`];
   if (explicit) return explicit.replace(/\/+$/, '');
