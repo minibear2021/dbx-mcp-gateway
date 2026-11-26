@@ -1,12 +1,13 @@
-# 群晖 / 通用 Docker Compose 方案：用 node:22-alpine 直接挂载源码启动网关。
+# 群晖 / 通用 Docker Compose 方案：直接使用 GHCR 发布的镜像启动网关。
 #
 # 使用方式：
-#   1) 把本插件目录放到 /volume1/docker/dbx/plugins/mcp-token-gateway/
-#      即该目录下应有：src/ bin/ package.json Dockerfile README.md 等。
-#   2) 把 gateway.env.example 复制为 /volume1/docker/dbx/gateway.env，
+#   1) 把 gateway.env.example 复制为 /volume1/docker/dbx/gateway.env，
 #      填入随机 token（DBX_WEB_MCP_TOKEN 与 MCP_GATEWAY_UPSTREAM_TOKEN 必须同值）。
+#   2) 保持 /volume1/docker/dbx/data/mcp-gateway 目录可写（token 库与审计日志）。
 #   3) 把本文件复制为 /volume1/docker/dbx/compose.yaml 后在 Container Manager 启动。
-#      不需要 .env，也不需要 --env-file。
+#      不需要 .env、不需要 --env-file，也不再需要挂载网关源码目录。
+#
+# 升级网关：把下方 mcp-gateway 的 image 标签改为新版本号，重新拉取并启动容器。
 #
 # 注意：
 #   - dbx 的 8082 仍保留用于 Web UI；如不需要 Web UI 可删掉该端口映射，
@@ -31,18 +32,14 @@ services:
     restart: unless-stopped
 
   mcp-gateway:
-    image: node:22-alpine
-    pull_policy: missing
-    working_dir: /app
-    command: ["node", "src/server.mjs"]
+    image: ghcr.io/minibear2021/dbx-mcp-gateway:1.1.0
+    pull_policy: always
     depends_on:
       - dbx
     ports:
       - "4225:4225"
     volumes:
-      # 源码目录只读挂载；目录里必须有 src/ 和 bin/。
-      - /volume1/docker/dbx/plugins/mcp-token-gateway:/app:ro
-      # token 库与审计日志需要可写。
+      # token 库与审计日志需要持久化；镜像内已包含源码，无需再挂载源码目录。
       - /volume1/docker/dbx/data/mcp-gateway:/data
     env_file:
       - ./gateway.env

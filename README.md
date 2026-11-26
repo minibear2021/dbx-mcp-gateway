@@ -79,7 +79,7 @@ dbx 原有的 4224 端口建议不再对外暴露。
 
 ### 群晖 / 只给 dbx 加一个服务的写法
 
-如果不想在 NAS 上 build 镜像，可用 `node:22-alpine` 直接挂载源码启动。把插件目录放到 `/volume1/docker/dbx/plugins/mcp-token-gateway/`（该目录下要有 `src/`、`bin/`、`package.json`）后：
+群晖 compose 默认使用 GHCR 发布的镜像 `ghcr.io/minibear2021/dbx-mcp-gateway:1.1.0`，不需要在 NAS 上 build，也不需要挂载网关源码目录（镜像内已包含代码）。只需准备持久化目录和环境变量文件：
 
 1. 把 `plugins/mcp-token-gateway/docker-compose.synology.yml` 的全文复制到 `/volume1/docker/dbx/compose.yaml`（`docker-compose.synology.envfile.yml` 是同一方案的副本，二者都没有任何 `${...}` 插值）。
 2. 把 `plugins/mcp-token-gateway/gateway.env.example` 复制为 `/volume1/docker/dbx/gateway.env`，用 `openssl rand -hex 32` 生成随机值，并把下面两行填成**同一个值**：
@@ -259,7 +259,7 @@ git push origin v1.2.0
 
 标签版本与 `package.json` 不一致时工作流会直接失败并提示。也可以在 GitHub 页面手动触发（Actions → Build and publish Docker image → Run workflow），此时使用当前 `package.json` 版本。
 
-群晖改用 GHCR 镜像时，把 compose 中 `mcp-gateway` 服务的 `build:` 段替换为 `image: ghcr.io/minibear2021/dbx-mcp-gateway:1.1.0`。若 GHCR 包为私有，需先在 GitHub 生成带 `read:packages` 权限的令牌，并在 NAS 上执行 `docker login ghcr.io -u <用户名> -p <令牌>`；公开包可直接拉取。已有的群晖本地构建方式不受影响，本地构建的镜像版本显示为 `dev`。
+仓库中的 `docker-compose.synology.yml` 与 `docker-compose.synology.envfile.yml` 已默认使用 GHCR 镜像，并移除了源码只读挂载；只需保留 `/volume1/docker/dbx/data/mcp-gateway` 可写卷。若你仍在使用旧的本地构建 compose，请把 `mcp-gateway` 服务的 `build:` 段替换为 `image: ghcr.io/minibear2021/dbx-mcp-gateway:1.1.0` 并删除源码挂载。若 GHCR 包为私有，需先在 GitHub 生成带 `read:packages` 权限的令牌，并在 NAS 上执行 `docker login ghcr.io -u <用户名> -p <令牌>`；公开包可直接拉取。本地构建的镜像版本显示为 `dev`。
 
 > **部署方式**：本项目只通过 Docker Compose 启动。dbx 插件体系没有 HTTP 鉴权扩展点，也没有安装/启动钩子，无法作为插件在 dbx 内启动，因此不提供 `.dbxp` 包、也不上插件市场。
 
