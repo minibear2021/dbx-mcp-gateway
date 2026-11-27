@@ -58,6 +58,7 @@ dialog::backdrop{background:var(--backdrop)}
 @media(max-width:720px){.event-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.event-grid{grid-template-columns:minmax(0,1fr)}}
 .field label{display:block;color:var(--muted);margin-bottom:4px}
+.hint{display:block;color:var(--muted);font-size:12px;margin-top:5px}
 .field input{width:100%}
 .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--toast-bg);color:var(--toast-text);padding:10px 18px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -149,7 +150,7 @@ dialog::backdrop{background:var(--backdrop)}
 <h2 id="editTitle">新建访问密钥</h2>
 <div class="field"><label>用户名称（必填）</label><input type="text" id="fieldLabel" required></div>
 <div class="field"><label>备注</label><input type="text" id="fieldNote"></div>
-<div class="field"><label>到期日期（选填，有效期至当天 23:59）</label><input type="date" id="fieldExpiry"></div>
+<div class="field"><label>到期日期（选填，有效期至当天 23:59）</label><input type="date" id="fieldExpiry"><span class="hint">框内文字是浏览器按系统语言显示的日期格式提示，点日历图标选择即可。</span></div>
 <p class="error" id="editError"></p>
 <div class="dialog-actions"><button type="button" id="editCancelBtn">取消</button><button type="submit" class="primary" id="editSubmit">保存</button></div>
 </form>
