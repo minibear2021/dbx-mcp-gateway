@@ -66,7 +66,7 @@ dbx 的 4224 端口建议仅用于容器内部通信，不对外暴露。
 
 ### 群晖部署
 
-群晖部署使用官方发布镜像 `ghcr.io/minibear2021/dbx-mcp-gateway:1.1.0`。准备数据目录与环境变量文件后即可启动：
+群晖部署使用官方发布镜像 `ghcr.io/minibear2021/dbx-mcp-gateway:1.2.0`。准备数据目录与环境变量文件后即可启动：
 
 1. 使用 `plugins/mcp-token-gateway/docker-compose.synology.envfile.yml`（或 `docker-compose.synology.yml`）作为 `/volume1/docker/dbx/compose.yaml`。
 2. 将 `plugins/mcp-token-gateway/gateway.env.example` 另存为 `/volume1/docker/dbx/gateway.env`，用 `openssl rand -hex 32` 生成随机值，并填写以下两项为**相同值**：
@@ -219,18 +219,18 @@ npm start   # 需设置 MCP_GATEWAY_UPSTREAM_TOKEN
 
 ## 版本与 Docker 镜像发布
 
-版本号以 `package.json` 的 `version` 为唯一来源（当前 `1.1.0`）。发布时版本号会写入镜像标签、`org.opencontainers.image.version` 标签以及容器内的 `MCP_GATEWAY_VERSION` 环境变量。
+版本号以 `package.json` 的 `version` 为唯一来源（当前 `1.2.0`）。发布时版本号会写入镜像标签、`org.opencontainers.image.version` 标签以及容器内的 `MCP_GATEWAY_VERSION` 环境变量。
 
-推送到 `master` / `main` 且 `package.json` 版本发生变化，或推送 `v<版本号>` 标签（例如 `v1.1.0`）时，GitHub Actions 会自动构建镜像并推送到 GHCR：
+推送到 `master` / `main` 且 `package.json` 版本发生变化，或推送 `v<版本号>` 标签（例如 `v1.2.0`）时，GitHub Actions 会自动构建镜像并推送到 GHCR：
 
-- `ghcr.io/minibear2021/dbx-mcp-gateway:1.1.0`
-- `ghcr.io/minibear2021/dbx-mcp-gateway:v1.1.0`
+- `ghcr.io/minibear2021/dbx-mcp-gateway:1.2.0`
+- `ghcr.io/minibear2021/dbx-mcp-gateway:v1.2.0`
 - `ghcr.io/minibear2021/dbx-mcp-gateway:latest`
 
 推荐发布流程：
 
 ```bash
-# 先修改 package.json 的 version，例如 1.1.0 -> 1.2.0
+# 先修改 package.json 的 version，例如 1.2.0 -> 1.3.0
 git add package.json
 git commit -m "chore: release v1.2.0"
 git tag v1.2.0
@@ -240,7 +240,7 @@ git push origin v1.2.0
 
 标签版本与 `package.json` 不一致时工作流会直接失败并提示。也可以在 GitHub 页面手动触发（Actions → Build and publish Docker image → Run workflow），此时使用当前 `package.json` 版本。
 
-仓库中的 `docker-compose.synology.yml` 与 `docker-compose.synology.envfile.yml` 已默认使用 GHCR 镜像，并移除了源码只读挂载；只需保留 `/volume1/docker/dbx/data/mcp-gateway` 可写卷。若你仍在使用旧的本地构建 compose，请把 `mcp-gateway` 服务的 `build:` 段替换为 `image: ghcr.io/minibear2021/dbx-mcp-gateway:1.1.0` 并删除源码挂载。若 GHCR 包为私有，需先在 GitHub 生成带 `read:packages` 权限的令牌，并在 NAS 上执行 `docker login ghcr.io -u <用户名> -p <令牌>`；公开包可直接拉取。本地构建的镜像版本显示为 `dev`。
+仓库中的 `docker-compose.synology.yml` 与 `docker-compose.synology.envfile.yml` 已默认使用 GHCR 镜像，并移除了源码只读挂载；只需保留 `/volume1/docker/dbx/data/mcp-gateway` 可写卷。若你仍在使用旧的本地构建 compose，请把 `mcp-gateway` 服务的 `build:` 段替换为 `image: ghcr.io/minibear2021/dbx-mcp-gateway:1.2.0` 并删除源码挂载。若 GHCR 包为私有，需先在 GitHub 生成带 `read:packages` 权限的令牌，并在 NAS 上执行 `docker login ghcr.io -u <用户名> -p <令牌>`；公开包可直接拉取。本地构建的镜像版本显示为 `dev`。
 
 > **部署方式**：通过 Docker Compose 启动，不提供插件市场安装包。
 

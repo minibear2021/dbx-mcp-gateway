@@ -29,7 +29,7 @@ services:
     restart: unless-stopped
 
   mcp-gateway:
-    image: ghcr.io/minibear2021/dbx-mcp-gateway:1.1.0
+    image: ghcr.io/minibear2021/dbx-mcp-gateway:1.2.0
     pull_policy: always
     depends_on:
       - dbx
