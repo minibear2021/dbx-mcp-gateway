@@ -54,6 +54,7 @@ dialog::backdrop{background:var(--backdrop)}
 .event-grid .field{margin:0;min-width:0}
 .event-grid .field.wide{grid-column:1 / -1}
 .event-grid code{white-space:pre-wrap;word-break:break-word}
+.event-grid .field:not(.wide) code{padding:7px 10px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:720px){.event-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.event-grid{grid-template-columns:minmax(0,1fr)}}
 .field label{display:block;color:var(--muted);margin-bottom:4px}
@@ -389,8 +390,8 @@ var EVENT_LABELS = {
 function prettyArgs(text){
   try { return JSON.stringify(JSON.parse(text), null, 2); } catch (error) { return text; }
 }
-// 编号、时间、客户端信息与调用参数通常较长，单独占一行；其余字段三栏显示。
-var WIDE_EVENT_KEYS = { id: true, ts: true, ua: true, mcpArgs: true };
+// 操作参数通常较长，单独占一行；其余字段以短框一行三栏显示。
+var WIDE_EVENT_KEYS = { mcpArgs: true };
 function showEventDetail(entry){
   currentEvent = publicEvent(entry);
   entry = currentEvent;
@@ -414,9 +415,12 @@ function showEventDetail(entry){
       display = typeof value === "object" ? JSON.stringify(value) : String(value);
     }
     var row = el("div", "field");
-    if (WIDE_EVENT_KEYS[key] || String(display).length > 48) row.classList.add("wide");
+    var isWide = !!WIDE_EVENT_KEYS[key];
+    if (isWide) row.classList.add("wide");
     row.appendChild(el("label", "", EVENT_LABELS[key] || key));
-    row.appendChild(el("code", "", display));
+    var valueNode = el("code", "", display);
+    if (!isWide) valueNode.title = display;
+    row.appendChild(valueNode);
     box.appendChild(row);
   });
   byId("eventDialog").showModal();
