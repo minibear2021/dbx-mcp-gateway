@@ -164,7 +164,6 @@ dialog::backdrop{background:var(--backdrop)}
 
 <dialog id="eventDialog">
 <h2>记录详情</h2>
-<p class="muted" id="eventIdLine"></p>
 <div class="event-grid" id="eventFields"></div>
 <div class="dialog-actions"><button id="copyEventBtn">复制详情</button><button class="primary" id="closeEventBtn">关闭</button></div>
 </dialog>
@@ -395,7 +394,6 @@ var WIDE_EVENT_KEYS = { mcpArgs: true };
 function showEventDetail(entry){
   currentEvent = publicEvent(entry);
   entry = currentEvent;
-  byId("eventIdLine").textContent = "记录编号：" + (entry.id || "-");
   var box = byId("eventFields");
   box.textContent = "";
   Object.keys(entry).forEach(function(key){
