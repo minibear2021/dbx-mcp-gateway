@@ -47,13 +47,15 @@ tr:last-child td{border-bottom:none}
 .actions{display:flex;gap:4px;flex-wrap:wrap}
 .actions button{padding:4px 8px;font-size:12px}
 code{display:block;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:12px;word-break:break-all;font-size:13px;color:var(--text)}
-dialog{border:1px solid var(--line);border-radius:12px;padding:22px;max-width:700px;width:calc(100% - 40px);box-shadow:0 20px 60px rgba(0,0,0,.18);background:var(--card);color:var(--text)}
+dialog{border:1px solid var(--line);border-radius:12px;padding:22px;max-width:960px;width:calc(100% - 40px);box-shadow:0 20px 60px rgba(0,0,0,.18);background:var(--card);color:var(--text)}
 dialog::backdrop{background:var(--backdrop)}
 .field{margin:10px 0}
-.event-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px;margin-top:12px}
+.event-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 18px;margin-top:12px}
 .event-grid .field{margin:0;min-width:0}
 .event-grid .field.wide{grid-column:1 / -1}
 .event-grid code{white-space:pre-wrap;word-break:break-word}
+@media(max-width:720px){.event-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.event-grid{grid-template-columns:minmax(0,1fr)}}
 .field label{display:block;color:var(--muted);margin-bottom:4px}
 .field input{width:100%}
 .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
@@ -387,7 +389,7 @@ var EVENT_LABELS = {
 function prettyArgs(text){
   try { return JSON.stringify(JSON.parse(text), null, 2); } catch (error) { return text; }
 }
-// 编号、时间、客户端信息与调用参数通常较长，单独占一行；其余字段两栏显示。
+// 编号、时间、客户端信息与调用参数通常较长，单独占一行；其余字段三栏显示。
 var WIDE_EVENT_KEYS = { id: true, ts: true, ua: true, mcpArgs: true };
 function showEventDetail(entry){
   currentEvent = publicEvent(entry);

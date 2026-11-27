@@ -300,7 +300,7 @@ test('Web UI 与 MCP 共用同一个 4225 端口；页面不再包含管理口�
     assert.match(html, /id="detailNextBtn"/);
     assert.match(html, /id="eventDialog"/);
     assert.match(html, /class="event-grid" id="eventFields"/);
-    assert.match(html, /grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+    assert.match(html, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
     assert.match(html, /WIDE_EVENT_KEYS/);
     assert.doesNotMatch(html, /密钥编号/);
     assert.doesNotMatch(html, /"密钥编号："/);
