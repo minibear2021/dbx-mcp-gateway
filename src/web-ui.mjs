@@ -25,6 +25,8 @@ h2{font-size:16px;margin:0 0 10px}
 .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .spacer{flex:1}
 input[type=text],input[type=date]{border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:inherit;background:var(--card);color:var(--text);min-width:220px}
+input[type=date]::-webkit-calendar-picker-indicator{order:-1;margin:0 10px 0 0;cursor:pointer;opacity:.75}
+input[type=date].empty::-webkit-datetime-edit{display:none}
 input:focus,select:focus{outline:2px solid var(--focus);border-color:var(--brand)}
 select{border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit;background:var(--card);color:var(--text)}
 button{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:8px 13px;font:inherit;cursor:pointer}
@@ -58,7 +60,6 @@ dialog::backdrop{background:var(--backdrop)}
 @media(max-width:720px){.event-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:480px){.event-grid{grid-template-columns:minmax(0,1fr)}}
 .field label{display:block;color:var(--muted);margin-bottom:4px}
-.hint{display:block;color:var(--muted);font-size:12px;margin-top:5px}
 .field input{width:100%}
 .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--toast-bg);color:var(--toast-text);padding:10px 18px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -150,7 +151,7 @@ dialog::backdrop{background:var(--backdrop)}
 <h2 id="editTitle">新建访问密钥</h2>
 <div class="field"><label>用户名称（必填）</label><input type="text" id="fieldLabel" required></div>
 <div class="field"><label>备注</label><input type="text" id="fieldNote"></div>
-<div class="field"><label>到期日期（选填，有效期至当天 23:59）</label><input type="date" id="fieldExpiry"><span class="hint">框内文字是浏览器按系统语言显示的日期格式提示，点日历图标选择即可。</span></div>
+<div class="field"><label>到期日期（选填，有效期至当天 23:59）</label><input type="date" id="fieldExpiry"></div>
 <p class="error" id="editError"></p>
 <div class="dialog-actions"><button type="button" id="editCancelBtn">取消</button><button type="submit" class="primary" id="editSubmit">保存</button></div>
 </form>
@@ -214,6 +215,10 @@ function expiryFromDateInput(value){
   if (!value) return null;
   var d = new Date(value + "T23:59:59");
   return isNaN(d.getTime()) ? null : d.toISOString();
+}
+function syncExpiryPlaceholder(){
+  var input = byId("fieldExpiry");
+  if (input) input.classList.toggle("empty", !input.value);
 }
 function showLogin(){
   byId("app").hidden = true;
@@ -512,6 +517,7 @@ function openEdit(item){
   byId("fieldLabel").value = item ? item.label : "";
   byId("fieldNote").value = item ? (item.note || "") : "";
   byId("fieldExpiry").value = item ? toDateInputValue(item.expiresAt) : "";
+  syncExpiryPlaceholder();
   byId("editError").textContent = "";
   byId("editDialog").showModal();
 }
@@ -586,6 +592,8 @@ byId("editForm").addEventListener("submit", function(event){
   saveEdit();
 });
 byId("editCancelBtn").addEventListener("click", function(){ byId("editDialog").close(); });
+byId("fieldExpiry").addEventListener("input", syncExpiryPlaceholder);
+byId("fieldExpiry").addEventListener("change", syncExpiryPlaceholder);
 byId("copyBtn").addEventListener("click", async function(){
   var value = byId("newTokenValue").textContent;
   try {

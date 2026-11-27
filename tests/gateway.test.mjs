@@ -310,8 +310,10 @@ test('Web UI 与 MCP 共用同一个 4225 端口；页面不再包含管理口�
     assert.match(html, /<th>时间<\/th><th>操作<\/th><th>状态<\/th>/);
     assert.match(html, /操作参数/);
     assert.match(html, /<input type="date" id="fieldExpiry">/);
-    assert.match(html, /框内文字是浏览器按系统语言显示的日期格式提示/);
-    assert.doesNotMatch(html, /id="fieldExpiry" placeholder=/);
+    assert.match(html, /input\[type=date\]::-webkit-calendar-picker-indicator\{order:-1/);
+    assert.match(html, /input\[type=date\]\.empty::-webkit-datetime-edit\{display:none\}/);
+    assert.match(html, /function syncExpiryPlaceholder/);
+    assert.doesNotMatch(html, /框内文字是浏览器按系统语言显示的日期格式提示/);
     assert.match(html, /function expiryFromDateInput/);
     assert.match(html, /showEventDetail/);
     assert.match(html, /id="themeBtn"/);
