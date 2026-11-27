@@ -24,7 +24,7 @@ h2{font-size:16px;margin:0 0 10px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
 .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .spacer{flex:1}
-input[type=text],input[type=datetime-local]{border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:inherit;background:var(--card);color:var(--text);min-width:220px}
+input[type=text],input[type=date]{border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:inherit;background:var(--card);color:var(--text);min-width:220px}
 input:focus,select:focus{outline:2px solid var(--focus);border-color:var(--brand)}
 select{border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit;background:var(--card);color:var(--text)}
 button{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:8px 13px;font:inherit;cursor:pointer}
@@ -149,7 +149,7 @@ dialog::backdrop{background:var(--backdrop)}
 <h2 id="editTitle">新建访问密钥</h2>
 <div class="field"><label>用户名称（必填）</label><input type="text" id="fieldLabel" required></div>
 <div class="field"><label>备注</label><input type="text" id="fieldNote"></div>
-<div class="field"><label>到期时间（选填）</label><input type="text" id="fieldExpiry" placeholder="2027-01-01T00:00:00Z"></div>
+<div class="field"><label>到期日期（选填，有效期至当天 23:59）</label><input type="date" id="fieldExpiry"></div>
 <p class="error" id="editError"></p>
 <div class="dialog-actions"><button type="button" id="editCancelBtn">取消</button><button type="submit" class="primary" id="editSubmit">保存</button></div>
 </form>
@@ -201,6 +201,18 @@ function fmt(value){
   if (!value) return "-";
   var d = new Date(value);
   return isNaN(d.getTime()) ? String(value) : d.toLocaleString("zh-CN");
+}
+function toDateInputValue(value){
+  if (!value) return "";
+  var d = new Date(value);
+  if (isNaN(d.getTime())) return "";
+  var pad = function(n){ return n < 10 ? "0" + n : String(n); };
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+}
+function expiryFromDateInput(value){
+  if (!value) return null;
+  var d = new Date(value + "T23:59:59");
+  return isNaN(d.getTime()) ? null : d.toISOString();
 }
 function showLogin(){
   byId("app").hidden = true;
@@ -498,7 +510,7 @@ function openEdit(item){
   byId("editTitle").textContent = item ? "编辑 · " + item.label : "新建访问密钥";
   byId("fieldLabel").value = item ? item.label : "";
   byId("fieldNote").value = item ? (item.note || "") : "";
-  byId("fieldExpiry").value = item && item.expiresAt ? item.expiresAt : "";
+  byId("fieldExpiry").value = item ? toDateInputValue(item.expiresAt) : "";
   byId("editError").textContent = "";
   byId("editDialog").showModal();
 }
@@ -507,7 +519,7 @@ async function saveEdit(){
   var body = {
     label: byId("fieldLabel").value.trim(),
     note: byId("fieldNote").value,
-    expiresAt: byId("fieldExpiry").value.trim() || null
+    expiresAt: expiryFromDateInput(byId("fieldExpiry").value)
   };
   if (!body.label) {
     byId("editError").textContent = "请填写用户名称";

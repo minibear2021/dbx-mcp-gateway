@@ -309,6 +309,9 @@ test('Web UI 与 MCP 共用同一个 4225 端口；页面不再包含管理口�
     assert.doesNotMatch(html, /"密钥编号："/);
     assert.match(html, /<th>时间<\/th><th>操作<\/th><th>状态<\/th>/);
     assert.match(html, /操作参数/);
+    assert.match(html, /<input type="date" id="fieldExpiry">/);
+    assert.doesNotMatch(html, /id="fieldExpiry" placeholder=/);
+    assert.match(html, /function expiryFromDateInput/);
     assert.match(html, /showEventDetail/);
     assert.match(html, /id="themeBtn"/);
     assert.match(html, /dbx-theme/);
